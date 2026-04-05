@@ -1,0 +1,234 @@
+<!-- ============================================================
+     LANDING PAGE — MediConnect
+     ============================================================ -->
+
+<!-- ══ HERO ══════════════════════════════════════════════════ -->
+<section class="hero-section">
+  <div class="hero-bg-pattern"></div>
+  <div class="hero-container">
+
+    <!-- Left: Text -->
+    <div class="hero-text">
+      <div class="hero-badge">
+        <span class="badge-pulse"></span>
+        Plateforme santé certifiée HDS &amp; conforme RGPD
+      </div>
+
+      <h1 class="hero-title">
+        La santé <span class="hero-title-accent">connectée</span>
+        pour tous
+      </h1>
+
+      <p class="hero-subtitle">
+        MediConnect simplifie votre parcours de santé : prenez rendez-vous,
+        accédez à votre dossier médical, échangez avec vos médecins —
+        <strong>tout en un seul endroit sécurisé.</strong>
+      </p>
+
+      <div class="hero-actions">
+        <a routerLink="/register" class="btn-hero-primary">
+          Créer mon compte gratuit
+          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+          </svg>
+        </a>
+        <a routerLink="/doctors" class="btn-hero-secondary">
+          Trouver un médecin
+        </a>
+      </div>
+
+      <div class="hero-trust">
+        <div class="trust-item">
+          <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span>Inscription gratuite</span>
+        </div>
+        <div class="trust-item">
+          <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span>Aucune carte requise</span>
+        </div>
+        <div class="trust-item">
+          <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span>Données chiffrées AES-256</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: App mockup card -->
+    <div class="hero-visual">
+      <div class="app-mockup">
+        <div class="mockup-header">
+          <div class="mockup-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+          <span class="mockup-title">Tableau de bord</span>
+        </div>
+        <div class="mockup-body">
+          <!-- Next appointment -->
+          <div class="mockup-card mockup-card-teal">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-xs text-teal-600 font-semibold uppercase tracking-wide">Prochain RDV</p>
+                <p class="text-sm font-bold text-stone-800 mt-1">Dr. Karim Mansouri</p>
+                <p class="text-xs text-stone-500">Cardiologue — Demain 10h30</p>
+              </div>
+              <div class="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-xl">📅</div>
+            </div>
+            <div class="mockup-progress">
+              <div class="mockup-progress-bar"></div>
+            </div>
+          </div>
+          <!-- Medication reminder -->
+          <div class="mockup-card">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center text-lg">💊</div>
+              <div>
+                <p class="text-sm font-semibold text-stone-800">Metformine 500mg</p>
+                <p class="text-xs text-stone-500">Dans 2 heures · Avec repas</p>
+              </div>
+              <div class="ml-auto">
+                <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rappel</span>
+              </div>
+            </div>
+          </div>
+          <!-- Quick stats row -->
+          <div class="mockup-stats-row">
+            <div class="mockup-stat">
+              <p class="text-lg font-bold text-teal-600">12</p>
+              <p class="text-xs text-stone-500">Consultations</p>
+            </div>
+            <div class="mockup-stat">
+              <p class="text-lg font-bold text-blue-600">5</p>
+              <p class="text-xs text-stone-500">Ordonnances</p>
+            </div>
+            <div class="mockup-stat">
+              <p class="text-lg font-bold text-green-600">3</p>
+              <p class="text-xs text-stone-500">Analyses</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Floating badge -->
+      <div class="mockup-floating-badge">
+        <span class="text-xl">🔒</span>
+        <div>
+          <p class="text-xs font-bold text-stone-800">Données sécurisées</p>
+          <p class="text-[10px] text-stone-500">Chiffrement AES-256</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ STATS ══════════════════════════════════════════════════ -->
+<section class="stats-section">
+  <div class="stats-container">
+    <div *ngFor="let stat of stats" class="stat-item">
+      <div class="stat-icon">{{ stat.icon }}</div>
+      <div class="stat-value">{{ stat.value }}{{ stat.suffix }}</div>
+      <div class="stat-label">{{ stat.label }}</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FEATURES ═══════════════════════════════════════════════ -->
+<section class="features-section">
+  <div class="section-container">
+    <div class="section-header">
+      <p class="section-eyebrow">Fonctionnalités</p>
+      <h2 class="section-title">Tout ce dont vous avez besoin</h2>
+      <p class="section-subtitle">
+        Une plateforme complète pour gérer votre santé au quotidien,
+        conçue autour de vos besoins réels.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div *ngFor="let f of features" class="feature-card" [ngClass]="'feature-' + f.color">
+        <div class="feature-icon-wrap">
+          <span class="feature-icon">{{ f.icon }}</span>
+        </div>
+        <h3 class="feature-title">{{ f.title }}</h3>
+        <p class="feature-desc">{{ f.description }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ HOW IT WORKS ═══════════════════════════════════════════ -->
+<section class="how-section">
+  <div class="section-container">
+    <div class="section-header">
+      <p class="section-eyebrow">Comment ça marche</p>
+      <h2 class="section-title">Commencez en 4 étapes</h2>
+    </div>
+
+    <div class="steps-grid">
+      <div *ngFor="let step of steps; let i = index" class="step-card">
+        <div class="step-number">{{ step.number }}</div>
+        <div class="step-content">
+          <h3 class="step-title">{{ step.title }}</h3>
+          <p class="step-desc">{{ step.description }}</p>
+        </div>
+        <div *ngIf="i < steps.length - 1" class="step-connector">
+          <svg class="w-6 h-6 text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TESTIMONIALS ═══════════════════════════════════════════ -->
+<section class="testimonials-section">
+  <div class="section-container">
+    <div class="section-header">
+      <p class="section-eyebrow">Témoignages</p>
+      <h2 class="section-title">Ce que disent nos utilisateurs</h2>
+    </div>
+
+    <div class="testimonials-grid">
+      <div *ngFor="let t of testimonials" class="testimonial-card">
+        <div class="testimonial-stars">
+          <span *ngFor="let s of [1,2,3,4,5]">⭐</span>
+        </div>
+        <p class="testimonial-text">"{{ t.text }}"</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">{{ t.avatar }}</div>
+          <div>
+            <p class="testimonial-name">{{ t.name }}</p>
+            <p class="testimonial-role">{{ t.role }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CTA ════════════════════════════════════════════════════ -->
+<section class="cta-section">
+  <div class="cta-container">
+    <div class="cta-content">
+      <h2 class="cta-title">Prêt à prendre soin de votre santé ?</h2>
+      <p class="cta-subtitle">
+        Rejoignez plus de 1 200 patients qui font confiance à MediConnect.
+      </p>
+      <div class="cta-actions">
+        <a routerLink="/register" class="btn-cta-primary">
+          Créer mon compte — c'est gratuit
+        </a>
+        <a routerLink="/doctors" class="btn-cta-secondary">
+          Découvrir nos médecins
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
