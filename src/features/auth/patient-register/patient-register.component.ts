@@ -206,32 +206,13 @@ function ageValidator(minAge: number) {
         </div>
 
         <details class="rounded-2xl border border-stone-200 bg-white p-4">
-          <summary class="cursor-pointer text-sm font-semibold text-stone-900">Informations médicales (optionnel)</summary>
-          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div class="space-y-1.5">
-              <label class="block text-xs font-medium text-stone-700">Groupe sanguin (optionnel)</label>
-              <select formControlName="bloodType" class="field-input">
-                <option value="">—</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-              </select>
-            </div>
+          <summary class="cursor-pointer text-sm font-semibold text-stone-900">Informations supplémentaires (optionnel)</summary>
+          <div class="mt-4">
             <div class="space-y-1.5">
               <label class="block text-xs font-medium text-stone-700">Adresse (optionnel)</label>
               <input type="text" formControlName="address" placeholder="Ex: Rue, ville"
                      class="field-input" [class.field-input--error]="showError('address')" />
               @if (showError('address')) { <p class="field-error">Adresse invalide</p> }
-            </div>
-            <div class="space-y-1.5 md:col-span-2">
-              <label class="block text-xs font-medium text-stone-700">Allergies connues (optionnel)</label>
-              <textarea rows="3" formControlName="allergies" placeholder="Ex: Pénicilline, Arachides..."
-                        class="field-input"></textarea>
             </div>
           </div>
         </details>
@@ -320,8 +301,6 @@ export class PatientRegisterComponent {
     phone:       [''],
     dateOfBirth: ['', [Validators.required, ageValidator(5)]],
     gender:      [''],
-    bloodType:         [''],
-    allergies:         [''],
     address:           ['', [Validators.maxLength(200)]],
     emergencyContactName:  ['', [Validators.maxLength(100)]],
     emergencyContactPhone: [''],
@@ -395,8 +374,6 @@ export class PatientRegisterComponent {
         phone:       (v.phone || '').trim() || undefined,
         dateOfBirth: v.dateOfBirth!,
         gender:      (v.gender ? (v.gender as Gender) : undefined),
-        bloodType:         (v.bloodType || '').trim() || undefined,
-        allergies:         (v.allergies || '').trim() || undefined,
         address:           (v.address || '').trim() || undefined,
         emergencyContactName:  (v.emergencyContactName || '').trim() || undefined,
         emergencyContactPhone: (v.emergencyContactPhone || '').trim() || undefined,
