@@ -2,6 +2,10 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
+import { DoctorApprovalModalComponent } from '../../../app/components/admin/doctor-approval-modal/doctor-approval-modal.component';
+import { RejectPayload, DoctorRejectionModalComponent } from '../../../app/components/admin/doctor-rejection-modal/doctor-rejection-modal.component';
+import { SuspendPayload, DoctorSuspensionModalComponent } from '../../../app/components/admin/doctor-suspension-modal/doctor-suspension-modal.component';
+import { DoctorStatusBadgeComponent } from '../../../app/components/shared/doctor-status-badge/doctor-status-badge.component';
 import { UserService } from '../../../core/services/user.service';
 import { Doctor, VerificationStatus } from '../../../core/user';
 import { ToastService } from '../../auth/toast/toast.service';
@@ -9,7 +13,14 @@ import { ToastService } from '../../auth/toast/toast.service';
 @Component({
   selector: 'app-admin-doctors',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    DoctorStatusBadgeComponent,
+    DoctorApprovalModalComponent,
+    DoctorRejectionModalComponent,
+    DoctorSuspensionModalComponent,
+  ],
   template: `
     <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
@@ -46,9 +57,7 @@ import { ToastService } from '../../auth/toast/toast.service';
               <div class="min-w-0 flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl border border-stone-200 bg-stone-50 overflow-hidden flex items-center justify-center flex-shrink-0">
                   <img *ngIf="d.profilePicture" [src]="d.profilePicture" alt="" class="w-full h-full object-cover"/>
-                  <span *ngIf="!d.profilePicture" class="text-xs font-bold text-stone-600">
-                    {{ initials(d.firstName, d.lastName) }}
-                  </span>
+                  <span *ngIf="!d.profilePicture" class="text-xs font-bold text-stone-600">{{ initials(d) }}</span>
                 </div>
                 <div class="min-w-0">
                   <p class="text-sm font-semibold text-stone-900 truncate">Dr. {{ (d.firstName || '') + ' ' + (d.lastName || '') }}</p>
@@ -59,12 +68,10 @@ import { ToastService } from '../../auth/toast/toast.service';
               <div class="text-sm text-stone-700 truncate">{{ specializationLabel(d.specialization) }}</div>
               <div class="text-sm text-stone-700 truncate">{{ d.rppsNumber || '—' }}</div>
               <div class="flex justify-center">
-                <span class="px-2 py-1 rounded-full text-[11px] font-semibold" [ngClass]="statusBadgeClass(d.verificationStatus)">
-                  {{ statusLabel(d.verificationStatus) }}
-                </span>
+                <app-doctor-status-badge [status]="d.verificationStatus" />
               </div>
               <div class="flex items-center justify-end gap-2">
-                <button *ngIf="d.verificationStatus === 'PENDING'" (click)="openApprove(d)"
+                <button *ngIf="d.verificationStatus === 'PENDING'" (click)="approveTarget.set(d)"
                         class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold">
                   Approuver
                 </button>
@@ -76,7 +83,7 @@ import { ToastService } from '../../auth/toast/toast.service';
                         class="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-semibold">
                   Suspendre
                 </button>
-                <button *ngIf="d.verificationStatus === 'REJECTED'" (click)="openApprove(d)"
+                <button *ngIf="d.verificationStatus === 'REJECTED'" (click)="approveTarget.set(d)"
                         class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold">
                   Approuver
                 </button>
@@ -89,234 +96,77 @@ import { ToastService } from '../../auth/toast/toast.service';
           </div>
         </div>
       </div>
-
-      <div *ngIf="approveTarget() as d" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-        <div class="w-full max-w-lg rounded-2xl bg-white border border-stone-200 shadow-xl p-5">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-bold text-stone-900">Approuver le compte médecin</h2>
-            </div>
-            <button (click)="closeModals()" class="text-stone-500 hover:text-stone-700 text-xl leading-none">×</button>
-          </div>
-
-          <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl border border-stone-200 bg-white overflow-hidden flex items-center justify-center flex-shrink-0">
-                <img *ngIf="d.profilePicture" [src]="d.profilePicture" alt="" class="w-full h-full object-cover"/>
-                <span *ngIf="!d.profilePicture" class="text-sm font-bold text-stone-600">
-                  {{ initials(d.firstName, d.lastName) }}
-                </span>
-              </div>
-              <div class="min-w-0">
-                <div class="text-sm text-stone-900 font-semibold truncate">Dr. {{ d.firstName }} {{ d.lastName }}</div>
-                <div class="text-xs text-stone-600 truncate">{{ d.email }}</div>
-              </div>
-            </div>
-            <div class="mt-3 text-xs text-stone-700">
-              <div><span class="font-semibold">Spécialisation :</span> {{ specializationLabel(d.specialization) }}</div>
-              <div class="mt-1"><span class="font-semibold">Numéro RPPS :</span> {{ d.rppsNumber || '—' }}</div>
-            </div>
-            <div class="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-2">
-              En approuvant ce compte, le médecin aura un accès complet à la plateforme, y compris les dossiers patients.
-            </div>
-          </div>
-
-          <div class="mt-5 flex items-center justify-end gap-2">
-            <button (click)="closeModals()" class="px-3 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-sm font-semibold text-stone-800">
-              Annuler
-            </button>
-            <button (click)="confirmApprove(d)" [disabled]="modalLoading()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-semibold flex items-center gap-2">
-              <svg *ngIf="modalLoading()" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              Confirmer l'approbation
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div *ngIf="rejectTarget() as d" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-        <div class="w-full max-w-lg rounded-2xl bg-white border border-stone-200 shadow-xl p-5">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-bold text-stone-900">Refuser le compte médecin</h2>
-            </div>
-            <button (click)="closeModals()" class="text-stone-500 hover:text-stone-700 text-xl leading-none">×</button>
-          </div>
-
-          <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl border border-stone-200 bg-white overflow-hidden flex items-center justify-center flex-shrink-0">
-                <img *ngIf="d.profilePicture" [src]="d.profilePicture" alt="" class="w-full h-full object-cover"/>
-                <span *ngIf="!d.profilePicture" class="text-sm font-bold text-stone-600">
-                  {{ initials(d.firstName, d.lastName) }}
-                </span>
-              </div>
-              <div class="min-w-0">
-                <div class="text-sm text-stone-900 font-semibold truncate">Dr. {{ d.firstName }} {{ d.lastName }}</div>
-                <div class="text-xs text-stone-600 truncate">{{ d.email }}</div>
-              </div>
-            </div>
-            <div class="mt-3 text-xs text-stone-700">
-              <div><span class="font-semibold">Spécialisation :</span> {{ specializationLabel(d.specialization) }}</div>
-              <div class="mt-1"><span class="font-semibold">Numéro RPPS :</span> {{ d.rppsNumber || '—' }}</div>
-            </div>
-          </div>
-
-          <textarea
-            class="mt-4 w-full min-h-[110px] rounded-xl border border-stone-200 p-3 text-sm outline-none focus:ring-2 focus:ring-rose-200"
-            placeholder="Veuillez indiquer la raison du refus..."
-            [value]="reason()"
-            (input)="reason.set(($any($event.target).value || '').toString())"
-          ></textarea>
-          <div class="mt-2 text-xs text-stone-500">Minimum 10 caractères</div>
-          <div class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-2">
-            Le médecin sera notifié par e-mail de cette décision avec le motif indiqué.
-          </div>
-          <div *ngIf="reasonError()" class="mt-2 text-sm text-rose-700">{{ reasonError() }}</div>
-
-          <div class="mt-5 flex items-center justify-end gap-2">
-            <button (click)="closeModals()" class="px-3 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-sm font-semibold text-stone-800">
-              Annuler
-            </button>
-            <button (click)="confirmReject(d)" [disabled]="modalLoading() || reason().trim().length < 10"
-                    class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-sm font-semibold flex items-center gap-2">
-              <svg *ngIf="modalLoading()" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              Confirmer le refus
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div *ngIf="suspendTarget() as d" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-        <div class="w-full max-w-lg rounded-2xl bg-white border border-stone-200 shadow-xl p-5">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-bold text-stone-900">Suspendre le compte médecin</h2>
-            </div>
-            <button (click)="closeModals()" class="text-stone-500 hover:text-stone-700 text-xl leading-none">×</button>
-          </div>
-
-          <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl border border-stone-200 bg-white overflow-hidden flex items-center justify-center flex-shrink-0">
-                <img *ngIf="d.profilePicture" [src]="d.profilePicture" alt="" class="w-full h-full object-cover"/>
-                <span *ngIf="!d.profilePicture" class="text-sm font-bold text-stone-600">
-                  {{ initials(d.firstName, d.lastName) }}
-                </span>
-              </div>
-              <div class="min-w-0">
-                <div class="text-sm text-stone-900 font-semibold truncate">Dr. {{ d.firstName }} {{ d.lastName }}</div>
-                <div class="text-xs text-stone-600 truncate">{{ d.email }}</div>
-              </div>
-            </div>
-          </div>
-
-          <textarea
-            class="mt-4 w-full min-h-[110px] rounded-xl border border-stone-200 p-3 text-sm outline-none focus:ring-2 focus:ring-stone-200"
-            placeholder="Motif de la suspension..."
-            [value]="reason()"
-            (input)="reason.set(($any($event.target).value || '').toString())"
-          ></textarea>
-          <div class="mt-2 text-xs text-stone-500">Minimum 10 caractères</div>
-          <div class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-2">
-            Le médecin perdra immédiatement l'accès aux dossiers patients.
-          </div>
-          <div *ngIf="reasonError()" class="mt-2 text-sm text-rose-700">{{ reasonError() }}</div>
-
-          <div class="mt-5 flex items-center justify-end gap-2">
-            <button (click)="closeModals()" class="px-3 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-sm font-semibold text-stone-800">
-              Annuler
-            </button>
-            <button (click)="confirmSuspend(d)" [disabled]="modalLoading() || reason().trim().length < 10"
-                    class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-sm font-semibold flex items-center gap-2">
-              <svg *ngIf="modalLoading()" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              Confirmer la suspension
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
+
+    <app-doctor-approval-modal
+      [doctor]="approveTarget()"
+      [loading]="modalLoading()"
+      (confirm)="confirmApprove($event)"
+      (cancel)="closeModals()" />
+
+    <app-doctor-rejection-modal
+      [doctor]="rejectTarget()"
+      [loading]="modalLoading()"
+      (confirm)="confirmReject($event)"
+      (cancel)="closeModals()" />
+
+    <app-doctor-suspension-modal
+      [doctor]="suspendTarget()"
+      [loading]="modalLoading()"
+      (confirm)="confirmSuspend($event)"
+      (cancel)="closeModals()" />
   `,
 })
 export class AdminDoctorsComponent {
   private userService = inject(UserService);
-  private toast = inject(ToastService);
+  private toast       = inject(ToastService);
 
-  loading = signal(false);
-  doctors = signal<Doctor[]>([]);
+  loading       = signal(false);
+  doctors       = signal<Doctor[]>([]);
   approveTarget = signal<Doctor | null>(null);
-  rejectTarget = signal<Doctor | null>(null);
+  rejectTarget  = signal<Doctor | null>(null);
   suspendTarget = signal<Doctor | null>(null);
-  reason = signal('');
-  reasonError = signal<string | null>(null);
-  modalLoading = signal(false);
+  modalLoading  = signal(false);
 
-  constructor() {
-    this.load();
-  }
+  constructor() { this.load(); }
 
   load(): void {
     this.loading.set(true);
-    this.userService.getDoctorsForAdmin().pipe(
-      finalize(() => this.loading.set(false)),
-    ).subscribe({
+    this.userService.getDoctorsForAdmin().pipe(finalize(() => this.loading.set(false))).subscribe({
       next: res => this.doctors.set(res),
-      error: () => this.toast.error('Impossible de charger les médecins.'),
+      error: ()  => this.toast.error('Impossible de charger les médecins.'),
     });
   }
 
-  initials(firstName?: string, lastName?: string): string {
-    const a = (firstName || '').trim().slice(0, 1).toUpperCase();
-    const b = (lastName || '').trim().slice(0, 1).toUpperCase();
-    return (a + b) || 'DR';
+  initials(d: Doctor): string {
+    return ((d.firstName || '').slice(0, 1) + (d.lastName || '').slice(0, 1)).toUpperCase() || 'DR';
   }
 
   specializationLabel(value: unknown): string {
     const v = String(value || '').toUpperCase();
-    if (v === 'GENERAL_PRACTICE') return 'Médecine générale';
-    if (v === 'CARDIOLOGY') return 'Cardiologie';
-    if (v === 'DERMATOLOGY') return 'Dermatologie';
-    if (v === 'PEDIATRICS') return 'Pédiatrie';
-    if (v === 'NEUROLOGY') return 'Neurologie';
-    if (v === 'ORTHOPEDICS') return 'Orthopédie';
-    if (v === 'PSYCHIATRY') return 'Psychiatrie';
-    if (v === 'RADIOLOGY') return 'Radiologie';
-    if (v === 'OTHER') return 'Autre';
-    return v ? v : '—';
-  }
-
-  openApprove(d: Doctor): void {
-    this.closeModals();
-    this.approveTarget.set(d);
+    const map: Record<string, string> = {
+      GENERAL_PRACTICE: 'Médecine générale', CARDIOLOGY: 'Cardiologie',
+      DERMATOLOGY: 'Dermatologie', PEDIATRICS: 'Pédiatrie',
+      NEUROLOGY: 'Neurologie', ORTHOPEDICS: 'Orthopédie',
+      PSYCHIATRY: 'Psychiatrie', RADIOLOGY: 'Radiologie', OTHER: 'Autre',
+    };
+    return map[v] || (v ? v : '—');
   }
 
   openReject(d: Doctor): void {
     this.closeModals();
     this.rejectTarget.set(d);
-    this.reason.set('');
-    this.reasonError.set(null);
   }
 
   openSuspend(d: Doctor): void {
     this.closeModals();
     this.suspendTarget.set(d);
-    this.reason.set('');
-    this.reasonError.set(null);
   }
 
   closeModals(): void {
     this.approveTarget.set(null);
     this.rejectTarget.set(null);
     this.suspendTarget.set(null);
-    this.reasonError.set(null);
     this.modalLoading.set(false);
   }
 
@@ -325,79 +175,49 @@ export class AdminDoctorsComponent {
     this.userService.approveDoctor(d.id).subscribe({
       next: updated => {
         this.toast.success(`Le compte du Dr. ${d.firstName} ${d.lastName} a été approuvé`);
-        this.doctors.update(list => list.map(x => x.id === d.id ? { ...x, verificationStatus: updated.verificationStatus } : x));
+        this.updateDoctor(d.id, updated.verificationStatus);
         this.closeModals();
       },
-      error: () => {
-        this.modalLoading.set(false);
-        this.toast.error('Action impossible.');
-      },
+      error: () => { this.modalLoading.set(false); this.toast.error('Action impossible.'); },
     });
   }
 
-  confirmReject(d: Doctor): void {
-    const reason = this.reason().trim();
-    if (reason.length < 10) {
-      this.reasonError.set('Le motif doit contenir au moins 10 caractères.');
-      return;
-    }
+  confirmReject({ doctor: d, reason }: RejectPayload): void {
     this.modalLoading.set(true);
     this.userService.rejectDoctor(d.id, reason).subscribe({
       next: updated => {
         this.toast.success(`Le compte du Dr. ${d.firstName} ${d.lastName} a été refusé`);
-        this.doctors.update(list => list.map(x => x.id === d.id ? { ...x, verificationStatus: updated.verificationStatus } : x));
+        this.updateDoctor(d.id, updated.verificationStatus);
         this.closeModals();
       },
-      error: () => {
-        this.modalLoading.set(false);
-        this.toast.error('Action impossible.');
-      },
+      error: () => { this.modalLoading.set(false); this.toast.error('Action impossible.'); },
     });
   }
 
-  confirmSuspend(d: Doctor): void {
-    const reason = this.reason().trim();
-    if (reason.length < 10) {
-      this.reasonError.set('Le motif doit contenir au moins 10 caractères.');
-      return;
-    }
+  confirmSuspend({ doctor: d, reason }: SuspendPayload): void {
     this.modalLoading.set(true);
     this.userService.suspendDoctor(d.id, reason).subscribe({
       next: updated => {
         this.toast.success(`Le compte du Dr. ${d.firstName} ${d.lastName} a été suspendu`);
-        this.doctors.update(list => list.map(x => x.id === d.id ? { ...x, verificationStatus: updated.verificationStatus } : x));
+        this.updateDoctor(d.id, updated.verificationStatus);
         this.closeModals();
       },
-      error: () => {
-        this.modalLoading.set(false);
-        this.toast.error('Action impossible.');
-      },
+      error: () => { this.modalLoading.set(false); this.toast.error('Action impossible.'); },
     });
-  }
-
-  statusLabel(status: VerificationStatus | undefined): string {
-    if (status === 'PENDING') return 'En attente';
-    if (status === 'APPROVED') return 'Approuvé';
-    if (status === 'REJECTED') return 'Refusé';
-    if (status === 'SUSPENDED') return 'Suspendu';
-    return String(status || '—');
-  }
-
-  statusBadgeClass(status: VerificationStatus | undefined): string {
-    if (status === 'PENDING') return 'bg-amber-50 text-amber-800';
-    if (status === 'APPROVED') return 'bg-emerald-50 text-emerald-700';
-    if (status === 'REJECTED') return 'bg-rose-50 text-rose-700';
-    if (status === 'SUSPENDED') return 'bg-stone-200 text-stone-700';
-    return 'bg-stone-200 text-stone-700';
   }
 
   confirmReactivate(d: Doctor): void {
     this.userService.reactivateDoctor(d.id).subscribe({
       next: updated => {
         this.toast.success(`Le compte du Dr. ${d.firstName} ${d.lastName} a été réactivé`);
-        this.doctors.update(list => list.map(x => x.id === d.id ? { ...x, verificationStatus: updated.verificationStatus } : x));
+        this.updateDoctor(d.id, updated.verificationStatus);
       },
       error: () => this.toast.error('Action impossible.'),
     });
+  }
+
+  private updateDoctor(id: number, verificationStatus: VerificationStatus | undefined): void {
+    if (!verificationStatus) return;
+    this.doctors.update(list => list.map(x => x.id === id ? { ...x, verificationStatus } : x));
   }
 }
