@@ -10,6 +10,7 @@ import {
   AnyUser,
   AuthResponse,
   BiometricEnrollRequest,
+  ChangePasswordRequest,
   DoctorRegisterRequest,
   LoginRequest,
   LoginWith2FARequest,
@@ -78,16 +79,33 @@ export class AuthService {
       .pipe(tap(() => this.storage.clearAll()));
   }
 
-  // ── Password Reset ────────────────────────────────────────────────────────────
+  // ── Password Change (authenticated) ──────────────────────────────────────────
 
-  /** Trigger password reset email via Keycloak */
-  requestPasswordReset(payload: PasswordResetRequest): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${this.base}/password-reset`, payload);
+  /** Change password for the currently logged-in user */
+  changePassword(payload: ChangePasswordRequest): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/change-password`, payload);
   }
 
-  /** Confirm new password with the token from the reset email */
+  // ── Password Reset ────────────────────────────────────────────────────────────
+
+  /** Step 1: Request a 6-digit reset code by email */
+  forgotPassword(payload: PasswordResetRequest): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/forgot-password`, payload);
+  }
+
+  /** Step 2: Submit code + new password to complete the reset */
+  resetPassword(payload: PasswordResetConfirmRequest): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/reset-password`, payload);
+  }
+
+  /** @deprecated use forgotPassword() */
+  requestPasswordReset(payload: PasswordResetRequest): Observable<{ message: string }> {
+    return this.forgotPassword(payload);
+  }
+
+  /** @deprecated use resetPassword() */
   confirmPasswordReset(payload: PasswordResetConfirmRequest): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${this.base}/password-reset/confirm`, payload);
+    return this.resetPassword(payload);
   }
 
   // ── Email Verification ────────────────────────────────────────────────────────

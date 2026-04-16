@@ -25,7 +25,7 @@ import { LoginFormComponent } from '../login-form/login-form.component';
         <div class="px-7 pb-7 pt-2">
           <app-login-form
             [showGoogle]="false"
-            [showForgotPassword]="false"
+            [showForgotPassword]="true"
             (goToSignup)="router.navigate(['/auth/signup'])"
           />
         </div>

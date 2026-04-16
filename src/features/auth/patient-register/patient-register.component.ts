@@ -1,6 +1,6 @@
 import {
   Component, EventEmitter, Output,
-  inject, signal
+  inject, signal, ViewChild
 } from '@angular/core';
 import {
   CommonModule
@@ -15,6 +15,8 @@ import { Gender }        from '../../../core/user';
 import { FileUploadService } from '../../../app/services/file-upload.service';
 import { ImageUploadComponent } from '../../../app/components/image-upload/image-upload.component';
 import { PhoneInputComponent } from '../../../app/components/phone-input/phone-input.component';
+import { RecaptchaComponent } from '../../../app/components/shared/recaptcha/recaptcha.component';
+import { environment } from '../../../environments/environment';
 import { finalize, of, switchMap } from 'rxjs';
 
 // ── Custom validators ──────────────────────────────────────────────────────
@@ -44,7 +46,7 @@ function ageValidator(minAge: number) {
 @Component({
   selector: 'app-patient-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ImageUploadComponent, PhoneInputComponent],
+  imports: [CommonModule, ReactiveFormsModule, ImageUploadComponent, PhoneInputComponent, RecaptchaComponent],
   template: `
     <div class="w-full">
       <div class="mb-5">
@@ -232,10 +234,22 @@ function ageValidator(minAge: number) {
           </div>
         </details>
 
+        <!-- reCAPTCHA -->
+        <div class="flex flex-col items-start gap-1">
+          <app-recaptcha
+            #recaptcha
+            [siteKey]="recaptchaSiteKey"
+            (resolved)="onCaptchaResolved($event)"
+            (error)="onCaptchaError()" />
+          @if (captchaError()) {
+            <p class="text-xs text-rose-600">Veuillez compléter le captcha</p>
+          }
+        </div>
+
         <!-- Submit -->
         <button
           type="submit"
-          [disabled]="loading()"
+          [disabled]="loading() || !captchaToken()"
           class="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 active:bg-teal-800
                  text-white font-semibold text-sm rounded-xl transition-all mt-1 disabled:opacity-60 disabled:cursor-not-allowed
                  flex items-center justify-center gap-2 shadow-sm shadow-teal-200 cursor-pointer">
@@ -283,6 +297,8 @@ export class PatientRegisterComponent {
   @Output() goToLogin = new EventEmitter<void>();
   @Output() verificationRequested = new EventEmitter<string>();
 
+  @ViewChild('recaptcha') recaptchaRef!: RecaptchaComponent;
+
   private fb     = inject(FormBuilder);
   private facade = inject(AuthFacade);
   private toast  = inject(ToastService);
@@ -292,7 +308,21 @@ export class PatientRegisterComponent {
   loading = signal(false);
   showPwd = signal(false);
   selectedFile = signal<File | null>(null);
-  uploadedUrl = signal<string | null>(null);
+  uploadedUrl  = signal<string | null>(null);
+
+  recaptchaSiteKey = environment.recaptcha.siteKey;
+  captchaToken     = signal<string | null>(null);
+  captchaError     = signal(false);
+
+  onCaptchaResolved(token: string | null): void {
+    this.captchaToken.set(token);
+    this.captchaError.set(false);
+  }
+
+  onCaptchaError(): void {
+    this.captchaToken.set(null);
+    this.captchaError.set(true);
+  }
 
   form = this.fb.group({
     firstName:   ['', [Validators.required, Validators.minLength(2)]],
@@ -357,6 +387,12 @@ export class PatientRegisterComponent {
       return;
     }
 
+    if (!this.captchaToken()) {
+      this.captchaError.set(true);
+      this.toast.warning('Veuillez compléter le captcha.', 'Captcha requis');
+      return;
+    }
+
     this.loading.set(true);
     const v = this.form.value;
 
@@ -379,6 +415,7 @@ export class PatientRegisterComponent {
         emergencyContactPhone: (v.emergencyContactPhone || '').trim() || undefined,
         profilePicture:    url || undefined,
         password:    (v.passwords as { password: string }).password,
+        recaptchaToken: this.captchaToken()!,
       })),
       finalize(() => this.loading.set(false)),
     ).subscribe({
@@ -390,6 +427,7 @@ export class PatientRegisterComponent {
         this.verificationRequested.emit(v.email!);
       },
       error: (err: Error) => {
+        this.recaptchaRef?.reset();
         this.toast.error(
           err.message ?? 'Inscription impossible. Veuillez réessayer.',
           'Inscription'

@@ -109,6 +109,19 @@ private _currentUser$ = new BehaviorSubject<AnyUser | null>(null);
     );
   }
 
+  /**
+   * Apply a successful AuthResponse (with tokens + user) to facade state.
+   * Used by the login form after completing the 2FA second step directly
+   * via AuthService, bypassing the standard facade.login() flow.
+   */
+  finalizeLogin(res: AuthResponse): AnyUser | null {
+    const user = res.user as AnyUser | undefined;
+    if (!user) return null;
+    this.setUser(user);
+    this.redirectAfterLogin(user);
+    return user;
+  }
+
   loginWithGoogle(): void {
     this.authService.initiateGoogleLogin();
   }

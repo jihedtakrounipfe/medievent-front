@@ -57,7 +57,7 @@ import { ToastService } from '../auth/toast/toast.service';
               [saving]="saving()"
               (save)="onSavePatientEmergency($event)" />
 
-            <app-security-settings [email]="u.email" />
+            <app-security-settings [email]="u.email" [twoFactorEnabled]="u.twoFactorEnabled ?? false" />
           </div>
         } @else if (isDoctorProfile()) {
           <div class="flex items-center gap-2 mb-4">
@@ -100,6 +100,8 @@ import { ToastService } from '../auth/toast/toast.service';
                 [data]="doctorEmergencyData()"
                 [saving]="saving()"
                 (save)="onSaveDoctorEmergency($event)" />
+
+              <app-security-settings [email]="u.email" [twoFactorEnabled]="u.twoFactorEnabled ?? false" />
             </div>
           } @else {
             <app-professional-info-form

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Output, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PersonalStepData, DoctorPersonalStepComponent } from '../../../app/components/auth/doctor-personal-step/doctor-personal-step.component';
 import { ProfessionalStepData, DoctorProfessionalStepComponent } from '../../../app/components/auth/doctor-professional-step/doctor-professional-step.component';
@@ -7,6 +7,7 @@ import { FileUploadService } from '../../../app/services/file-upload.service';
 import { AuthFacade } from '../../../core/services/auth.facade';
 import { Gender, Specialization } from '../../../core/user';
 import { ToastService } from '../toast/toast.service';
+import { environment } from '../../../environments/environment';
 import { finalize, of, switchMap } from 'rxjs';
 
 @Component({
@@ -37,7 +38,9 @@ import { finalize, of, switchMap } from 'rxjs';
           <app-doctor-personal-step (next)="onPersonalNext($event)" />
         } @else {
           <app-doctor-professional-step
+            #professionalStep
             [loading]="loading()"
+            [recaptchaSiteKey]="recaptchaSiteKey"
             (submit)="onProfessionalSubmit($event)"
             (back)="step.set(1)" />
         }
@@ -58,14 +61,17 @@ export class DoctorRegisterComponent {
   @Output() goToLogin            = new EventEmitter<void>();
   @Output() verificationRequested = new EventEmitter<string>();
 
+  @ViewChild('professionalStep') professionalStepRef?: DoctorProfessionalStepComponent;
+
   private facade = inject(AuthFacade);
   private toast  = inject(ToastService);
   private upload = inject(FileUploadService);
 
-  loading      = signal(false);
-  step         = signal<1 | 2>(1);
-  selectedFile = signal<File | null>(null);
-  uploadedUrl  = signal<string | null>(null);
+  loading          = signal(false);
+  step             = signal<1 | 2>(1);
+  selectedFile     = signal<File | null>(null);
+  uploadedUrl      = signal<string | null>(null);
+  recaptchaSiteKey = environment.recaptcha.siteKey;
 
   private step1Data: PersonalStepData | null = null;
 
@@ -101,6 +107,7 @@ export class DoctorRegisterComponent {
         consultationFee:      data.consultationFee,
         officeAddress:        data.officeAddress,
         profilePicture:       url || undefined,
+        recaptchaToken:       data.recaptchaToken,
       })),
       finalize(() => this.loading.set(false)),
     ).subscribe({
@@ -112,6 +119,7 @@ export class DoctorRegisterComponent {
         this.verificationRequested.emit(this.step1Data!.email);
       },
       error: (err: Error) => {
+        this.professionalStepRef?.resetCaptcha();
         this.toast.error(
           err.message ?? 'Inscription impossible. Veuillez réessayer.',
           'Inscription'

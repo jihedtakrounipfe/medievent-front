@@ -1,17 +1,104 @@
 import {
-  Component, EventEmitter, Input, Output,
+  Component, EventEmitter, Input, OnDestroy, Output,
   inject, signal
 } from '@angular/core';
 import { CommonModule }        from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { AuthService }         from '../../../core/services/auth.service';
 import { AuthFacade }          from '../../../core/services/auth.facade';
 import { ToastService }        from '../toast/toast.service';
+import { ForgotPasswordComponent } from '../forgot-password/forgot-password.component';
 
 @Component({
   selector: 'app-login-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ForgotPasswordComponent],
   template: `
+    <!-- Forgot-password flow (replaces login form) -->
+    @if (showForgotFlow()) {
+      <app-forgot-password
+        (back)="showForgotFlow.set(false)"
+        (done)="onForgotDone()"
+      />
+    } @else if (step() === '2fa') {
+
+    <!-- ── STEP 2: Email OTP ───────────────────────────────────────────── -->
+    <div class="w-full">
+      <div class="mb-6">
+        <button type="button" (click)="backToLogin()"
+                class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 mb-4 transition-colors cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Retour
+        </button>
+        <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Vérification en deux étapes</h2>
+        <p class="text-sm text-gray-500 mt-1">
+          Un code à 6 chiffres a été envoyé à <strong>{{ pendingEmail() }}</strong>.
+          Entrez-le ci-dessous pour terminer la connexion.
+        </p>
+      </div>
+
+      <form [formGroup]="otpForm" (ngSubmit)="onOtpSubmit()" novalidate class="space-y-4">
+
+        <!-- OTP input -->
+        <div class="space-y-1.5">
+          <label class="block text-sm font-medium text-gray-700">Code de vérification</label>
+          <input
+            type="text"
+            formControlName="otpCode"
+            placeholder="123456"
+            maxlength="6"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            class="w-full px-4 py-2.5 rounded-xl border text-sm text-gray-900 text-center
+                   tracking-widest font-mono placeholder-gray-400 outline-none transition-all"
+            [class.border-gray-200]="!otpErr()"
+            [class.bg-gray-50]="!otpErr()"
+            [class.border-red-300]="otpErr()"
+            [class.bg-red-50]="otpErr()"
+          />
+          @if (otpErr()) {
+            <p class="text-xs text-red-500">Le code est requis (6 chiffres).</p>
+          }
+          @if (otpServerError()) {
+            <p class="text-xs text-red-500">{{ otpServerError() }}</p>
+          }
+        </div>
+
+        <!-- Submit -->
+        <button
+          type="submit"
+          [disabled]="otpLoading()"
+          class="w-full py-2.5 px-4 bg-teal-500 hover:bg-teal-600 active:bg-teal-700
+                 text-white font-semibold text-sm rounded-xl transition-all
+                 disabled:opacity-60 disabled:cursor-not-allowed
+                 flex items-center justify-center gap-2 shadow-sm cursor-pointer mt-2">
+          @if (otpLoading()) {
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            Vérification…
+          } @else {
+            Vérifier le code
+          }
+        </button>
+
+        <p class="text-center text-xs text-gray-400 pt-1">
+          Vous n'avez pas reçu le code ?
+          <button type="button" (click)="resendOtp()" [disabled]="otpLoading()"
+                  class="text-teal-600 hover:text-teal-700 font-medium cursor-pointer disabled:opacity-50">
+            Renvoyer
+          </button>
+        </p>
+
+      </form>
+    </div>
+
+    } @else {
+
+    <!-- ── STEP 1: Email + Password ──────────────────────────────────────── -->
     <div class="w-full">
       <!-- Title -->
       <div class="mb-6">
@@ -63,11 +150,10 @@ import { ToastService }        from '../toast/toast.service';
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label class="block text-sm font-medium text-gray-700">Password</label>
-            @if (showForgotPassword) {
-              <button type="button" class="text-xs text-teal-600 hover:text-teal-700 font-medium cursor-pointer">
-                Forgot password?
-              </button>
-            }
+            <button type="button" (click)="showForgotFlow.set(true)"
+                    class="text-xs text-teal-600 hover:text-teal-700 font-medium cursor-pointer">
+              Forgot password?
+            </button>
           </div>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -129,10 +215,24 @@ import { ToastService }        from '../toast/toast.service';
           }
         </div>
 
+        <!-- Lockout banner -->
+        @if (isLocked()) {
+          <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-center gap-3">
+            <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            <p class="text-xs text-amber-700 font-medium">
+              Trop de tentatives. Réessayez dans
+              <span class="font-bold tabular-nums">{{ formatCountdown(countdown()) }}</span>
+            </p>
+          </div>
+        }
+
         <!-- Submit -->
         <button
           type="submit"
-          [disabled]="loading()"
+          [disabled]="loading() || isLocked()"
           class="w-full py-2.5 px-4 bg-teal-500 hover:bg-teal-600 active:bg-teal-700
                  text-white font-semibold text-sm rounded-xl transition-all
                  disabled:opacity-60 disabled:cursor-not-allowed
@@ -145,6 +245,12 @@ import { ToastService }        from '../toast/toast.service';
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
             Signing in...
+          } @else if (isLocked()) {
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+            Compte temporairement bloqué
           } @else {
             Sign In
           }
@@ -191,56 +297,210 @@ import { ToastService }        from '../toast/toast.service';
 
       </form>
     </div>
+
+    } <!-- end @else -->
   `,
 })
-export class LoginFormComponent {
+export class LoginFormComponent implements OnDestroy {
   @Input() showGoogle = false;
   @Input() showForgotPassword = false;
 
   @Output() goToSignup = new EventEmitter<void>();
   @Output() success    = new EventEmitter<void>();
 
-  private fb     = inject(FormBuilder);
-  private facade = inject(AuthFacade);
-  private toast  = inject(ToastService);
+  private fb          = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private facade      = inject(AuthFacade);
+  private toast       = inject(ToastService);
 
-  loading = signal(false);
-  showPwd = signal(false);
+  loading         = signal(false);
+  showPwd         = signal(false);
+  showForgotFlow  = signal(false);
+  isLocked        = signal(false);
+  countdown       = signal(0);
+
+  /** 'credentials' | '2fa' */
+  step          = signal<'credentials' | '2fa'>('credentials');
+  pendingEmail  = signal('');
+  pendingPwd    = signal('');
+
+  otpLoading      = signal(false);
+  otpServerError  = signal<string | null>(null);
+
+  private countdownTimer: ReturnType<typeof setInterval> | null = null;
 
   form = this.fb.group({
     email:    ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(5)]],
   });
 
+  otpForm = this.fb.group({
+    otpCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+  });
+
+  ngOnDestroy(): void {
+    this.clearTimer();
+  }
+
   showError(field: string): boolean {
     const ctrl = this.form.get(field);
     return !!(ctrl?.invalid && ctrl?.touched);
   }
 
+  otpErr(): boolean {
+    const ctrl = this.otpForm.get('otpCode');
+    return !!(ctrl?.invalid && ctrl?.touched);
+  }
+
   onSubmit(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.isLocked()) return;
 
     this.loading.set(true);
     const { email, password } = this.form.value;
 
-    this.facade.login({ email: email!, password: password! }).subscribe({
-      next: () => {
-        this.toast.success('Bienvenue sur MediConnect !', 'Connexion réussie');
+    this.authService.login({ email: email!, password: password! }).subscribe({
+      next: (res) => {
         this.loading.set(false);
+
+        if (res.requires2FA) {
+          // Password validated — 2FA code was sent — show OTP step
+          this.pendingEmail.set(email!);
+          this.pendingPwd.set(password!);
+          this.otpForm.reset();
+          this.otpServerError.set(null);
+          this.step.set('2fa');
+          this.toast.success('Code envoyé. Vérifiez votre boîte mail.', 'Vérification 2FA');
+          return;
+        }
+
+        // Direct login success (no 2FA)
+        this.facade.finalizeLogin(res);
+        this.toast.success('Bienvenue sur MediConnect !', 'Connexion réussie');
         this.success.emit();
       },
-      error: (err: Error) => {
+      error: (err: any) => {
         this.loading.set(false);
-        this.toast.error(
-          err.message ?? 'Email ou mot de passe incorrect.',
-          'Connexion échouée'
-        );
+
+        if (err?.status === 429 || (err?.message && String(err.message).includes('429'))) {
+          const remaining: number = err?.error?.remainingSeconds ?? 90;
+          this.startLockout(remaining);
+          return;
+        }
+
+        const msg: string = err?.error?.message ?? err?.message ?? '';
+        if (msg.toLowerCase().includes('trop de tentatives') || msg.includes('remainingSeconds')) {
+          const remaining: number = err?.error?.remainingSeconds ?? 90;
+          this.startLockout(remaining);
+          return;
+        }
+
+        this.toast.error(msg || 'Email ou mot de passe incorrect.', 'Connexion échouée');
       },
     });
   }
 
+  onOtpSubmit(): void {
+    this.otpForm.markAllAsTouched();
+    if (this.otpForm.invalid || this.otpLoading()) return;
+
+    this.otpServerError.set(null);
+    this.otpLoading.set(true);
+
+    const { otpCode } = this.otpForm.value;
+
+    this.authService.login({
+      email:    this.pendingEmail(),
+      password: this.pendingPwd(),
+      otpCode:  otpCode!,
+    }).subscribe({
+      next: (res) => {
+        this.otpLoading.set(false);
+        this.pendingPwd.set(''); // clear password from memory
+        this.facade.finalizeLogin(res);
+        this.toast.success('Bienvenue sur MediConnect !', 'Connexion réussie');
+        this.success.emit();
+      },
+      error: (err: any) => {
+        this.otpLoading.set(false);
+        const msg: string = err?.error?.message ?? err?.message ?? 'Code invalide ou expiré.';
+        this.otpServerError.set(msg);
+      },
+    });
+  }
+
+  resendOtp(): void {
+    // Re-submit step 1 to regenerate and resend the code
+    this.otpLoading.set(true);
+    this.otpServerError.set(null);
+
+    this.authService.login({
+      email:    this.pendingEmail(),
+      password: this.pendingPwd(),
+    }).subscribe({
+      next: (res) => {
+        this.otpLoading.set(false);
+        if (res.requires2FA) {
+          this.otpForm.reset();
+          this.toast.success('Un nouveau code a été envoyé.', '2FA');
+        } else {
+          // Shouldn't happen, but handle gracefully
+          this.facade.finalizeLogin(res);
+          this.success.emit();
+        }
+      },
+      error: (err: any) => {
+        this.otpLoading.set(false);
+        const msg: string = err?.error?.message ?? 'Erreur lors du renvoi du code.';
+        this.toast.error(msg, '2FA');
+      },
+    });
+  }
+
+  backToLogin(): void {
+    this.step.set('credentials');
+    this.pendingPwd.set('');
+    this.otpForm.reset();
+    this.otpServerError.set(null);
+  }
+
   onGoogleLogin(): void {
     this.facade.loginWithGoogle();
+  }
+
+  onForgotDone(): void {
+    this.showForgotFlow.set(false);
+    this.toast.success('Vous pouvez maintenant vous connecter.', 'Mot de passe réinitialisé');
+  }
+
+  formatCountdown(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  private startLockout(seconds: number): void {
+    this.clearTimer();
+    this.countdown.set(Math.ceil(seconds));
+    this.isLocked.set(true);
+
+    this.countdownTimer = setInterval(() => {
+      const remaining = this.countdown() - 1;
+      if (remaining <= 0) {
+        this.countdown.set(0);
+        this.isLocked.set(false);
+        this.clearTimer();
+        this.toast.success('Vous pouvez réessayer.', 'Déblocage');
+      } else {
+        this.countdown.set(remaining);
+      }
+    }, 1000);
+  }
+
+  private clearTimer(): void {
+    if (this.countdownTimer !== null) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
   }
 }

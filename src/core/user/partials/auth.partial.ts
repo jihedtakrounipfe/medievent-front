@@ -11,6 +11,8 @@ import { Gender, Specialization } from '../enums';
 export interface LoginRequest {
   email: string;
   password: string;
+  /** Optional — provided on the second step of 2FA login */
+  otpCode?: string;
 }
 
 export interface LoginWith2FARequest extends LoginRequest {
@@ -44,6 +46,7 @@ export interface PatientRegisterRequest {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   profilePicture?: string;
+  recaptchaToken: string;
 }
 
 export interface DoctorRegisterRequest {
@@ -62,6 +65,26 @@ export interface DoctorRegisterRequest {
   consultationDuration?: number;
   consultationFee?: number;
   profilePicture?: string;
+  recaptchaToken: string;
+}
+
+
+// ── 2FA ──────────────────────────────────────────────────────────────────────
+
+export interface TwoFactorMethod {
+  type: 'TOTP' | 'EMAIL' | 'SMS';
+  label: string;
+  configured: boolean;
+  available: boolean;
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  methods: TwoFactorMethod[];
+}
+
+export interface Enable2FARequest {
+  method: 'TOTP' | 'EMAIL';
 }
 
 export interface VerifyEmailRequest {
@@ -70,6 +93,14 @@ export interface VerifyEmailRequest {
 }
 
 
+// ── Password Change (in-app, authenticated) ──────────────────────────────
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 // ── Password Reset ───────────────────────────────────────────────────────
 
 export interface PasswordResetRequest {
@@ -77,8 +108,10 @@ export interface PasswordResetRequest {
 }
 
 export interface PasswordResetConfirmRequest {
-  token: string;
+  email: string;
+  code: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 

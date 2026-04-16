@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Specialization } from '../../../../core/user';
+import { RecaptchaComponent } from '../../../components/shared/recaptcha/recaptcha.component';
 
 export interface ProfessionalStepData {
   rppsNumber:           string;
@@ -10,6 +11,7 @@ export interface ProfessionalStepData {
   consultationDuration?: number;
   consultationFee?:     number;
   officeAddress?:       string;
+  recaptchaToken:       string;
 }
 
 const RPPS_REGEX = /^\d{11}$/;
@@ -17,7 +19,7 @@ const RPPS_REGEX = /^\d{11}$/;
 @Component({
   selector: 'app-doctor-professional-step',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RecaptchaComponent],
   template: `
     <div class="rounded-2xl border border-stone-200 bg-white p-4 space-y-4">
       <div class="flex items-center justify-between">
@@ -90,7 +92,19 @@ const RPPS_REGEX = /^\d{11}$/;
           <span>Votre compte sera soumis à vérification par notre équipe. Vous recevrez un e-mail de confirmation une fois votre compte approuvé.</span>
         </div>
 
-        <button type="submit" [disabled]="loading"
+        <!-- reCAPTCHA -->
+        <div class="flex flex-col items-start gap-1">
+          <app-recaptcha
+            #recaptcha
+            [siteKey]="recaptchaSiteKey"
+            (resolved)="onCaptchaResolved($event)"
+            (error)="onCaptchaError()" />
+          @if (captchaError()) {
+            <p class="text-xs text-rose-600">Veuillez compléter le captcha</p>
+          }
+        </div>
+
+        <button type="submit" [disabled]="loading || !captchaToken()"
                 class="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 active:bg-teal-800
                        text-white font-semibold text-sm rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed
                        flex items-center justify-center gap-2 shadow-sm shadow-teal-200 cursor-pointer">
@@ -120,11 +134,31 @@ const RPPS_REGEX = /^\d{11}$/;
 })
 export class DoctorProfessionalStepComponent {
   @Input() loading = false;
+  @Input() recaptchaSiteKey = '';
   @Output() submit = new EventEmitter<ProfessionalStepData>();
   @Output() back   = new EventEmitter<void>();
 
+  @ViewChild('recaptcha') recaptchaRef!: RecaptchaComponent;
+
   private fb = inject(FormBuilder);
   Specialization = Specialization;
+
+  captchaToken = signal<string | null>(null);
+  captchaError = signal(false);
+
+  onCaptchaResolved(token: string | null): void {
+    this.captchaToken.set(token);
+    this.captchaError.set(false);
+  }
+
+  onCaptchaError(): void {
+    this.captchaToken.set(null);
+    this.captchaError.set(true);
+  }
+
+  resetCaptcha(): void {
+    this.recaptchaRef?.reset();
+  }
 
   form = this.fb.group({
     rppsNumber:           ['', [Validators.required, Validators.pattern(RPPS_REGEX)]],
@@ -143,6 +177,12 @@ export class DoctorProfessionalStepComponent {
   onSubmit(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
+
+    if (!this.captchaToken()) {
+      this.captchaError.set(true);
+      return;
+    }
+
     const v = this.form.value;
     this.submit.emit({
       rppsNumber:           v.rppsNumber!,
@@ -151,6 +191,7 @@ export class DoctorProfessionalStepComponent {
       consultationDuration: v.consultationDuration == null ? undefined : Number(v.consultationDuration),
       consultationFee:      v.consultationFee      == null ? undefined : Number(v.consultationFee),
       officeAddress:        (v.officeAddress || '').trim() || undefined,
+      recaptchaToken:       this.captchaToken()!,
     });
   }
 }
