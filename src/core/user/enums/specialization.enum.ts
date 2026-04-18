@@ -1,0 +1,11 @@
+export enum Specialization {
+  GENERAL_PRACTICE = 'GENERAL_PRACTICE',
+  CARDIOLOGY       = 'CARDIOLOGY',
+  DERMATOLOGY      = 'DERMATOLOGY',
+  PEDIATRICS       = 'PEDIATRICS',
+  NEUROLOGY        = 'NEUROLOGY',
+  ORTHOPEDICS      = 'ORTHOPEDICS',
+  PSYCHIATRY       = 'PSYCHIATRY',
+  RADIOLOGY        = 'RADIOLOGY',
+  OTHER            = 'OTHER',
+}
