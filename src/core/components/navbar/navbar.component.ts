@@ -1,6 +1,7 @@
-import { Component, OnInit, HostListener, inject } from '@angular/core';
+import { Component, OnInit, HostListener, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { AuthFacade } from '../../services/auth.facade';
 import { AnyUser } from '../../user';
 
@@ -11,21 +12,26 @@ import { AnyUser } from '../../user';
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css']
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent implements OnInit, OnDestroy {
   private auth = inject(AuthFacade);
+  private destroy$ = new Subject<void>();
 
   isScrolled        = false;
   isMobileMenuOpen  = false;
   isNotifOpen       = false;
   isUserMenuOpen    = false;
+  isDoctor          = false;
   readonly user$ = this.auth.currentUser$;
 
-  navLinks = [
-    { label: 'Accueil',      path: '/'             },
-    { label: 'Discussions',  path: '/forum'         },
-    { label: 'Médecins',     path: '/doctors'       },
-    { label: 'Rendez-vous',  path: '/appointments'  },
+  baseLinks = [
+    { label: 'Accueil',     path: '/'          },
+    { label: 'Discussions', path: '/forum'      },
+    { label: 'Médecins',    path: '/auth/login' },
+    { label: 'Rendez-vous', path: '/auth/login' },
   ];
+
+  navLinks = [...this.baseLinks];
+
   notifications = [
     { icon: '📅', text: 'Rappel : RDV demain à 10h30',          time: 'Il y a 1h',  unread: true  },
     { icon: '💊', text: 'Prenez votre médicament (Metformine)',  time: 'Il y a 2h',  unread: true  },
@@ -42,7 +48,33 @@ export class NavbarComponent implements OnInit {
     if (!t.closest('#user-btn'))   this.isUserMenuOpen = false;
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.auth.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(user => {
+      console.log('[NAVBAR] user received:', user);
+      console.log('[NAVBAR] userType:', user?.userType);
+      this.isDoctor = user?.userType === 'DOCTOR';
+      const isPatient = user?.userType === 'PATIENT';
+      
+      let extraLinks = [];
+      if (this.isDoctor) {
+        extraLinks.push({ label: 'Agenda Global', path: '/events' });
+        extraLinks.push({ label: 'Mes Conférences', path: '/doctor/events/my' });
+      } else if (isPatient) {
+        extraLinks.push({ label: 'Événements', path: '/events' });
+      }
+      
+      this.navLinks = [
+        ...this.baseLinks,
+        ...extraLinks
+      ];
+      console.log('[NAVBAR] navLinks:', this.navLinks);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   toggleMobile(): void    { this.isMobileMenuOpen  = !this.isMobileMenuOpen; }
   toggleNotif(): void     { this.isNotifOpen        = !this.isNotifOpen;   this.isUserMenuOpen = false; }

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { Observable, finalize } from 'rxjs';
 import { EmergencyContactData, EmergencyContactFormComponent } from '../../app/components/profile/emergency-contact-form/emergency-contact-form.component';
 import { MedicalInfoData, MedicalInfoFormComponent } from '../../app/components/profile/medical-info-form/medical-info-form.component';
@@ -23,6 +24,7 @@ import { ToastService } from '../auth/toast/toast.service';
     EmergencyContactFormComponent,
     SecuritySettingsComponent,
     ProfessionalInfoFormComponent,
+    RouterModule
   ],
   template: `
     <div class="max-w-5xl mx-auto px-4 md:px-6 py-8">
@@ -81,6 +83,10 @@ import { ToastService } from '../auth/toast/toast.service';
                     [class.border-stone-200]="doctorTab() !== 'professional'">
               Informations professionnelles
             </button>
+            <a routerLink="/doctor/events/my"
+                    class="ml-auto px-4 py-2 bg-stone-900 text-white rounded-xl text-sm font-bold flex items-center gap-2 no-underline">
+               🗓️ Gérer mes événements
+            </a>
           </div>
 
           @if (doctorTab() === 'personal') {

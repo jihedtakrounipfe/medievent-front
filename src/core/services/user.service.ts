@@ -152,8 +152,8 @@ export class UserService {
     return this.http.patch<void>(`${this.baseV1}/doctors/${id}/deactivate`, {});
   }
 
-  getAdminStats(): Observable<{ totalUsers: number; totalPatients: number; totalDoctors: number; activeUsers: number }> {
-    return this.http.get<{ totalUsers: number; totalPatients: number; totalDoctors: number; activeUsers: number }>(
+  getAdminStats(): Observable<{ totalUsers: number; totalPatients: number; totalDoctors: number; activeUsers: number; pendingDoctors: number }> {
+    return this.http.get<{ totalUsers: number; totalPatients: number; totalDoctors: number; activeUsers: number; pendingDoctors: number }>(
       `${this.baseV1}/admin/stats`,
     );
   }

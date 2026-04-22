@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
+import { UserService } from '../../core/services/user.service';
 
 // ─── Models ──────────────────────────────────────────────────────────────────
 export type UserType = 'PATIENT' | 'DOCTOR' | 'ADMINISTRATOR' | 'INSTITUTION';
@@ -730,11 +731,9 @@ export class UserDetailModalComponent {
 })
 export class UserListComponent implements OnInit, OnDestroy {
 
-  private http     = inject(HttpClient);
-  private fb       = inject(FormBuilder);
-  private destroy$ = new Subject<void>();
-
-  readonly API = '/api/v1/users'; // uses proxy — no host needed
+  private userService = inject(UserService);
+  private fb          = inject(FormBuilder);
+  private destroy$    = new Subject<void>();
 
   // ── State ────────────────────────────────────────────────────────────────
   users         = signal<AppUserResponse[]>([]);
@@ -792,26 +791,29 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.error.set(null);
 
-    let params = new HttpParams().set('page', page).set('size', this.pageSize);
-    if (this.searchCtrl.value)  params = params.set('name',     this.searchCtrl.value);
-    if (this.roleFilter.value)  params = params.set('userType', this.roleFilter.value);
-    if (this.statusFilter.value !== '')
-      params = params.set('isActive', this.statusFilter.value!);
+    const params: any = {
+      page,
+      size: this.pageSize
+    };
 
-    this.http.get<PageResponse<AppUserResponse>>(`${this.API}/search`, { params })
-      .subscribe({
-        next: res => {
-          this.users.set(res.content);
-          this.totalElements.set(res.totalElements);
-          this.totalPages.set(res.totalPages);
-          this.currentPage.set(res.number);
-          this.loading.set(false);
-        },
-        error: err => {
-          this.error.set(err.message ?? 'Could not reach the server.');
-          this.loading.set(false);
-        },
-      });
+    if (this.searchCtrl.value)  params.name =     this.searchCtrl.value;
+    if (this.roleFilter.value)  params.userType = this.roleFilter.value as any;
+    if (this.statusFilter.value !== '')
+      params.isActive = this.statusFilter.value === 'true';
+
+    this.userService.searchUsers(params).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        this.users.set(res.content as any);
+        this.totalElements.set(res.totalElements);
+        this.totalPages.set(res.totalPages);
+        this.currentPage.set(page);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(err.message || 'Error loading users');
+      }
+    });
   }
 
   goTo(page: number): void {

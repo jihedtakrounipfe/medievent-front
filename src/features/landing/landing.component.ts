@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { EventService, MedicalEvent } from '../../core/services/event.service';
 
 @Component({
   selector: 'app-landing',
@@ -10,6 +11,9 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['./landing.component.css']
 })
 export class LandingComponent implements OnInit, OnDestroy {
+  private eventService = inject(EventService);
+
+  events = signal<MedicalEvent[]>([]);
 
   // Stats counter animation
   stats = [
@@ -92,6 +96,13 @@ export class LandingComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Start counter animation after a small delay
     setTimeout(() => this.animateCounters(), 800);
+    this.loadEvents();
+  }
+
+  loadEvents() {
+    this.eventService.getActiveEvents().subscribe(res => {
+      this.events.set(res.slice(0, 3)); // Show top 3 events
+    });
   }
 
   ngOnDestroy(): void {

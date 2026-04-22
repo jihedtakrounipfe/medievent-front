@@ -8,6 +8,8 @@ import { AuthService }         from '../../../core/services/auth.service';
 import { AuthFacade }          from '../../../core/services/auth.facade';
 import { ToastService }        from '../toast/toast.service';
 import { ForgotPasswordComponent } from '../forgot-password/forgot-password.component';
+import { UserType } from '../../../core/user';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login-form',
@@ -312,6 +314,7 @@ export class LoginFormComponent implements OnDestroy {
   private authService = inject(AuthService);
   private facade      = inject(AuthFacade);
   private toast       = inject(ToastService);
+  private router      = inject(Router);
 
   loading         = signal(false);
   showPwd         = signal(false);
@@ -375,6 +378,13 @@ export class LoginFormComponent implements OnDestroy {
         }
 
         // Direct login success (no 2FA)
+        if (res.user?.userType === UserType.ADMINISTRATOR) {
+          this.facade.logout('/auth/login'); // Clean up any partial session
+          this.toast.error('Accès refusé. Veuillez utiliser le Portail Admin dédié.', 'Sécurité');
+          this.loading.set(false);
+          return;
+        }
+
         this.facade.finalizeLogin(res);
         this.toast.success('Bienvenue sur MediConnect !', 'Connexion réussie');
         this.success.emit();
@@ -417,6 +427,13 @@ export class LoginFormComponent implements OnDestroy {
       next: (res) => {
         this.otpLoading.set(false);
         this.pendingPwd.set(''); // clear password from memory
+
+        if (res.user?.userType === UserType.ADMINISTRATOR) {
+          this.facade.logout('/auth/login');
+          this.toast.error('Accès refusé. Veuillez utiliser le Portail Admin dédié.', 'Sécurité');
+          return;
+        }
+
         this.facade.finalizeLogin(res);
         this.toast.success('Bienvenue sur MediConnect !', 'Connexion réussie');
         this.success.emit();

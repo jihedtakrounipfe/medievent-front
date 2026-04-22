@@ -25,13 +25,17 @@ export class AppComponent {
   title = 'medi-connect-frontend';
   private router = inject(Router);
   isAdminRoute = signal(false);
+  isRoomRoute = signal(false);
 
   constructor() {
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
     ).subscribe(e => {
-      this.isAdminRoute.set(e.urlAfterRedirects.startsWith('/admin'));
+      const url = e.urlAfterRedirects;
+      this.isAdminRoute.set(url.startsWith('/admin'));
+      this.isRoomRoute.set(url.includes('/room'));
     });
     this.isAdminRoute.set(this.router.url.startsWith('/admin'));
+    this.isRoomRoute.set(this.router.url.includes('/room'));
   }
 }

@@ -4,3 +4,4 @@ build/
 .env
 .angular/
 .claude/
+.vscode/settings.json

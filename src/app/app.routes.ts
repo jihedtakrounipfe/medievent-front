@@ -14,6 +14,16 @@ export const routes: Routes = [
         .then(m => m.LandingComponent),
   },
   {
+    path: 'events',
+    loadComponent: () => import('../features/public/events/event-public-list.component').then(m => m.EventPublicListComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'events/:id',
+    loadComponent: () => import('../features/public/events/event-detail.component').then(m => m.EventDetailComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'auth/login',
     loadComponent: () =>
       import('../features/auth/login-page/login-page.component')
@@ -53,6 +63,21 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'doctor/events/my',
+    loadComponent: () => import('../features/doctor/events/event-my-list.component').then(m => m.EventMyListComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'events/:id/room',
+    loadComponent: () => import('../features/doctor/events/event-room.component').then(m => m.VirtualRoomComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'doctor/events/create',
+    loadComponent: () => import('../features/doctor/events/event-create.component').then(m => m.EventCreateComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'doctor/pending-approval',
     loadComponent: () =>
       import('../features/doctor-approval/pending-approval.component')
@@ -67,39 +92,28 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
 
-  // ── Admin ─────────────────────────────────────────────
+  // ── Admin Portal ─────────────────────────────────────
   {
-    path: 'admin/dashboard',
+    path: 'admin/login',
     loadComponent: () =>
-      import('../features/admin/dashboard/admin-dashboard.component')
-        .then(m => m.AdminDashboardComponent),
-    canActivate: [authGuard, roleGuard(UserType.ADMINISTRATOR)],
+      import('../features/admin/login/admin-login.component')
+        .then(m => m.AdminLoginComponent),
   },
   {
-    path: 'admin/patients',
+    path: 'admin',
     loadComponent: () =>
-      import('../features/admin/patients/admin-patients.component')
-        .then(m => m.AdminPatientsComponent),
+      import('../features/admin/admin-layout/admin-layout.component')
+        .then(m => m.AdminLayoutComponent),
     canActivate: [authGuard, roleGuard(UserType.ADMINISTRATOR)],
-  },
-  {
-    path: 'admin/doctors',
-    loadComponent: () =>
-      import('../features/admin/doctors/admin-doctors.component')
-        .then(m => m.AdminDoctorsComponent),
-    canActivate: [authGuard, roleGuard(UserType.ADMINISTRATOR)],
-  },
-  {
-    path: 'admin/users',
-    component: UserListComponent,
-    canActivate: [authGuard, roleGuard(UserType.ADMINISTRATOR)],
-  },
-  {
-    path: 'admin/users/:id',
-    loadComponent: () =>
-      import('../features/admin/user-detail/admin-user-detail.component')
-        .then(m => m.AdminUserDetailComponent),
-    canActivate: [authGuard, roleGuard(UserType.ADMINISTRATOR)],
+    children: [
+      { path: 'dashboard', loadComponent: () => import('../features/admin/dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
+      { path: 'patients', loadComponent: () => import('../features/admin/patients/admin-patients.component').then(m => m.AdminPatientsComponent) },
+      { path: 'doctors', loadComponent: () => import('../features/admin/doctors/admin-doctors.component').then(m => m.AdminDoctorsComponent) },
+      { path: 'events', loadComponent: () => import('../features/admin/events/admin-events.component').then(m => m.AdminEventsComponent) },
+      { path: 'users', component: UserListComponent },
+      { path: 'users/:id', loadComponent: () => import('../features/admin/user-detail/admin-user-detail.component').then(m => m.AdminUserDetailComponent) },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+    ]
   },
 //   {
 //     path: 'forum',

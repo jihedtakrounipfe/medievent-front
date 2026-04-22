@@ -178,10 +178,10 @@ private _currentUser$ = new BehaviorSubject<AnyUser | null>(null);
     );
   }
 
-  logout(): void {
+  logout(redirectPath: string = '/auth/login'): void {
     this.authService.logout().subscribe({
-      complete: () => this.clearSession(),
-      error:    ()  => this.clearSession(),  // clear locally even if API fails
+      complete: () => this.clearSession(redirectPath),
+      error:    ()  => this.clearSession(redirectPath), // clear locally even if API fails
     });
   }
 
@@ -204,10 +204,10 @@ private _currentUser$ = new BehaviorSubject<AnyUser | null>(null);
     this.setLoading(false);
   }
 
-  private clearSession(): void {
+  private clearSession(redirectPath?: string): void {
     this.storage.clearAll();
     this._currentUser$.next(null);
-    this.router.navigate(['/auth/login']);
+    if (redirectPath) this.router.navigate([redirectPath]);
   }
 
   private redirectAfterLogin(user: AnyUser): void {

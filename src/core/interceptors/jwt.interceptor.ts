@@ -36,7 +36,8 @@ export const jwtInterceptor: HttpInterceptorFn = (
 
   return next(authedReq).pipe(
     catchError((err: unknown) => {
-      if (err instanceof HttpErrorResponse && err.status === 401) {
+      // Prevent deadlock: do not intercept 401s from the refresh request itself
+      if (err instanceof HttpErrorResponse && err.status === 401 && !req.url.includes('/refresh')) {
         return handle401(req, next, authService, storage);
       }
       return throwError(() => err);
@@ -95,6 +96,7 @@ function isPublicEndpoint(url: string): boolean {
     '/api/auth/password-reset',
     '/api/auth/verify-email',
     '/api/auth/oauth/callback',
+    '/api/v1/events/active'
   ];
   return publicPaths.some(p => url.includes(p));
 }

@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { UserService } from '../../../core/services/user.service';
+import { AuthFacade } from '../../../core/services/auth.facade';
 import { Patient } from '../../../core/user';
 import { ToastService } from '../../auth/toast/toast.service';
 

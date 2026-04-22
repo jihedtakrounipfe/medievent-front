@@ -22,9 +22,9 @@ export class FooterComponent {
     ],
     account: [
       { label: 'Mon profil',      path: '/profile'       },
-      { label: 'Dossier médical', path: '/medical-record'},
-      { label: 'Mes rappels',     path: '/reminders'     },
-      { label: 'Paramètres',      path: '/settings'      },
+      { label: 'Dossier médical', path: '/auth/login'    },
+      { label: 'Mes rappels',     path: '/auth/login'    },
+      { label: 'Portail Admin',   path: '/admin/login'   },
     ],
     legal: [
       { label: 'Politique de confidentialité', path: '/privacy'  },
