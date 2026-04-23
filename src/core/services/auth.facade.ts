@@ -212,7 +212,7 @@ private _currentUser$ = new BehaviorSubject<AnyUser | null>(null);
 
   private redirectAfterLogin(user: AnyUser): void {
     if (isAdministrator(user)) { this.router.navigate(['/admin/dashboard']); return; }
-    if (user.userType === 'PATIENT') { this.router.navigate(['/patient/profile']); return; }
+    if (user.userType === 'PATIENT') { this.router.navigate(['/']); return; }
     if (user.userType === 'DOCTOR') { this.router.navigate(['/doctor/profile']); return; }
     this.router.navigate(['/profile']);
   }

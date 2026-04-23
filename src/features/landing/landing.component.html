@@ -2,6 +2,34 @@
      LANDING PAGE — MediConnect
      ============================================================ -->
 
+@if (isLoggedIn | async) {
+  <!-- ══ LOGGED-IN HERO ════════════════════════════════════════ -->
+  <section class="py-20 px-6 text-center bg-gradient-to-br from-teal-50 to-white border-b border-teal-100">
+    <div class="max-w-4xl mx-auto">
+      <div class="inline-flex items-center gap-2 px-4 py-2 bg-teal-100 text-teal-700 rounded-full text-sm font-bold mb-6">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+        </span>
+        Tableau de bord patient
+      </div>
+      <h1 class="text-4xl md:text-5xl font-extrabold text-stone-900 mb-6 tracking-tight">
+        Bienvenue, <span class="text-teal-600">{{ (authFacade.currentUser$ | async)?.firstName }}</span> !
+      </h1>
+      <p class="text-lg md:text-xl text-stone-600 max-w-2xl mx-auto leading-relaxed">
+        Votre espace santé est prêt. Gérez vos rendez-vous, consultez vos dossiers médicaux et découvrez les événements santé à venir.
+      </p>
+      <div class="flex flex-wrap justify-center gap-4 mt-10">
+        <a routerLink="/patient/profile" class="px-8 py-3.5 bg-teal-600 text-white font-bold rounded-2xl hover:bg-teal-700 shadow-lg shadow-teal-200 transition-all">
+          Mon Profil Médical
+        </a>
+        <a routerLink="/events" class="px-8 py-3.5 bg-white text-stone-800 border border-stone-200 font-bold rounded-2xl hover:bg-stone-50 transition-all">
+          Explorer les Événements
+        </a>
+      </div>
+    </div>
+  </section>
+} @else {
 <!-- ══ HERO ══════════════════════════════════════════════════ -->
 <section class="hero-section">
   <div class="hero-bg-pattern"></div>
@@ -212,6 +240,7 @@
     </div>
   </div>
 </section>
+}
 
 <!-- ══ MEDICAL EVENTS ═══════════════════════════════════════════ -->
 <section *ngIf="events().length > 0" class="events-section py-20 bg-stone-50">
@@ -226,8 +255,9 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
       <div *ngFor="let ev of events()" 
-           class="bg-white rounded-3xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-xl transition-all group">
-        <div class="p-6">
+           [routerLink]="['/events', ev.id]"
+           class="bg-white rounded-3xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-xl transition-all group cursor-pointer">
+        <div class="p-6 pointer-events-none">
           <div class="flex items-center gap-2 mb-4">
             <span class="px-3 py-1 bg-teal-50 text-teal-700 text-[10px] font-bold rounded-full uppercase tracking-wider">
               {{ ev.targetAudience === 'DOCTORS_ONLY' ? 'Professionnel' : 'Public' }}
@@ -260,6 +290,7 @@
   </div>
 </section>
 
+@if (!(isLoggedIn | async)) {
 <!-- ══ CTA ════════════════════════════════════════════════════ -->
 <section class="cta-section">
   <div class="cta-container">
@@ -279,3 +310,4 @@
     </div>
   </div>
 </section>
+}

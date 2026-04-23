@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { EventService, MedicalEvent } from '../../core/services/event.service';
+import { AuthFacade } from '../../core/services/auth.facade';
 
 @Component({
   selector: 'app-landing',
@@ -12,8 +13,10 @@ import { EventService, MedicalEvent } from '../../core/services/event.service';
 })
 export class LandingComponent implements OnInit, OnDestroy {
   private eventService = inject(EventService);
+  public authFacade = inject(AuthFacade);
 
   events = signal<MedicalEvent[]>([]);
+  isLoggedIn = this.authFacade.isLoggedIn$;
 
   // Stats counter animation
   stats = [

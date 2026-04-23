@@ -1,6 +1,9 @@
-@if (isRoomRoute()) {
-  <!-- Virtual room: full-screen, no chrome -->
-  <router-outlet></router-outlet>
+@if (isRoomRoute() || isAdminLogin()) {
+  <!-- Full-screen views (Room / Admin Login): no chrome -->
+  <main class="h-screen w-screen overflow-hidden">
+     <app-toast/>
+     <router-outlet></router-outlet>
+  </main>
 } @else {
   <div class="flex flex-col min-h-screen bg-stone-50" [class.admin-shell]="isAdminRoute()">
 

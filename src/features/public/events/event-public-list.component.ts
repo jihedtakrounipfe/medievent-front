@@ -1,35 +1,52 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { EventService, MedicalEvent, ParticipantStatus, MyParticipation } from '../../../core/services/event.service';
 import { Router, RouterModule } from '@angular/router';
 import { AuthFacade } from '../../../core/services/auth.facade';
 import { catchError, of } from 'rxjs';
+import { Specialization } from '../../../core/user/enums/specialization.enum';
 
 @Component({
   selector: 'app-event-public-list',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   template: `
-    <div class="min-h-screen bg-slate-50 font-sans text-slate-900 pb-32">
+    <div class="min-h-screen bg-gray-50 font-sans text-gray-900 pb-32">
       
       <!-- Professional Catalog Header -->
-      <div class="bg-white border-b border-slate-200 pt-20 pb-16">
-        <div class="max-w-7xl mx-auto px-6">
+      <div class="bg-white border-b border-gray-200 pt-20 pb-16 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div class="max-w-2xl">
-              <span class="inline-block px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-widest mb-4">MediConnect Sessions</span>
-              <h1 class="text-4xl lg:text-7xl font-extrabold text-slate-900 tracking-tightest mb-6 leading-[1.1]">
-                Plateforme de <span class="text-blue-600">Conférences</span>.
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-xs font-bold uppercase tracking-wider mb-4 border border-teal-100">
+                 <span class="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+                 MediConnect Sessions
+              </span>
+              <h1 class="text-4xl lg:text-6xl font-extrabold text-gray-900 tracking-tight mb-4 leading-tight">
+                Plateforme de <span class="text-teal-600">Conférences</span>.
               </h1>
-              <p class="text-slate-500 text-lg lg:text-xl font-medium leading-relaxed">
+              <p class="text-gray-500 text-lg lg:text-xl font-medium leading-relaxed max-w-xl">
                 Accédez aux dernières avancées et partages d'expériences du monde médical par des experts certifiés.
               </p>
             </div>
-            <div class="flex gap-3">
-              <div class="h-12 w-12 rounded-full border border-slate-200 flex items-center justify-center text-slate-300">🔍</div>
-              <div class="h-12 px-6 rounded-full border border-slate-200 flex items-center gap-3 text-sm font-bold text-slate-600">
-                 Toutes les catégories
-                 <svg class="h-4 w-4 opacity-40" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            <div class="flex items-center gap-3">
+              <div class="relative w-full sm:w-64">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" [(ngModel)]="searchQuery" placeholder="Rechercher..." 
+                       class="h-12 w-full pl-10 pr-4 rounded-xl border border-gray-200 bg-white shadow-sm text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors">
+              </div>
+              
+              <div class="relative h-12 w-full sm:w-48 rounded-xl border border-gray-200 bg-white shadow-sm flex items-center text-sm font-bold text-gray-600 hover:border-teal-300 transition-colors">
+                 <select [(ngModel)]="selectedSpecialization" class="h-full w-full appearance-none bg-transparent pl-4 pr-10 focus:outline-none focus:ring-0 cursor-pointer">
+                    <option value="">Toutes les catégories</option>
+                    <option *ngFor="let s of specializations" [value]="s">{{ formatLabel(s) }}</option>
+                 </select>
+                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                 </div>
               </div>
             </div>
           </div>
@@ -37,72 +54,73 @@ import { catchError, of } from 'rxjs';
       </div>
 
       <!-- Events Grid -->
-      <div class="max-w-7xl mx-auto px-6 mt-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div *ngFor="let ev of events(); let i = index" 
+          <div *ngFor="let ev of filteredEvents(); let i = index" 
                [routerLink]="['/events', ev.id]"
-               class="group bg-white rounded-3xl border border-slate-200 overflow-hidden cursor-pointer hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-300 flex flex-col h-full animate-fade-in"
+               class="group bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer hover:border-teal-200 hover:shadow-lg hover:shadow-teal-100/50 transition-all duration-300 flex flex-col h-full animate-fade-in"
                [style.animation-delay]="(i * 0.05) + 's'">
             
             <!-- Banner Image -->
-            <div class="relative h-60 w-full overflow-hidden bg-slate-50">
-              <img *ngIf="ev.bannerUrl" [src]="ev.bannerUrl" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="Event Thumbnail"/>
-              <div *ngIf="!ev.bannerUrl" class="w-full h-full bg-slate-100 flex items-center justify-center text-5xl grayscale opacity-30">🔬</div>
+            <div class="relative h-56 w-full overflow-hidden bg-gray-100 border-b border-gray-100">
+              <img *ngIf="ev.bannerUrl" [src]="ev.bannerUrl" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Event Thumbnail"/>
+              <div *ngIf="!ev.bannerUrl" class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
               
               <!-- Category Badge (Top Left) -->
-              <div class="absolute top-4 left-4 flex flex-col gap-2 z-[50]">
-                 <span class="w-fit px-3 py-1 bg-white/90 backdrop-blur-md rounded-lg text-[9px] font-bold text-slate-900 border border-slate-200 uppercase tracking-widest shadow-sm">
+              <div class="absolute top-4 left-4 z-[50]">
+                 <span class="px-2.5 py-1 bg-white/95 backdrop-blur text-xs font-bold text-teal-800 rounded-md border border-teal-100 shadow-sm uppercase tracking-wider">
                     {{ formatLabel(ev.specialization || 'Général') }}
                  </span>
               </div>
 
               <!-- Presence Badge (Top Right) -->
               <div class="absolute top-4 right-4 z-[50]">
-                 <span [class]="isOnline(ev) ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900 text-white border-slate-800'" 
-                       class="px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border shadow-xl flex items-center gap-1.5">
-                    <span class="w-1 h-1 rounded-full bg-white animate-pulse"></span>
+                 <span [class]="isOnline(ev) ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-gray-100 text-gray-800 border-gray-200'" 
+                       class="px-2 py-1 rounded-md text-[10px] font-bold border shadow-sm flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full" [ngClass]="isOnline(ev) ? 'bg-indigo-600 animate-pulse' : 'bg-gray-500'"></span>
                     {{ isOnline(ev) ? 'En ligne' : 'Présentiel' }}
                  </span>
               </div>
 
-              <!-- Status Badges for authenticated users -->
-              <div class="absolute bottom-4 left-4 z-[50]" *ngIf="getParticipationStatus(ev.id!)">
-                 <span [class]="getBadgeClass(ev.id!)" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest shadow-lg">
-                    {{ getParticipationStatus(ev.id!) === 'CONFIRMED' ? 'Inscrit' : 'Attente' }}
+              <!-- Status Badges for authenticated users (Only for physical events) -->
+              <div class="absolute bottom-4 left-4 z-[50]" *ngIf="getParticipationStatus(ev.id!) && !isOnline(ev)">
+                 <span [class]="getBadgeClass(ev.id!)" class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm border">
+                    {{ getParticipationStatus(ev.id!) === 'CONFIRMED' ? '✓ Inscrit' : '⌛ En attente' }}
                  </span>
               </div>
             </div>
 
             <!-- Content Area -->
-            <div class="p-8 lg:p-10 flex-1 flex flex-col">
-              <div class="flex items-center gap-2 mb-4 text-slate-400 text-[10px] font-bold uppercase tracking-widest leading-none">
-                <span>{{ ev.eventDate | date:'dd MMM' }}</span>
-                <span class="w-1 h-1 rounded-full bg-slate-200"></span>
-                <span>{{ ev.eventDate | date:'HH:mm' }}H</span>
+            <div class="p-6 sm:p-8 flex-1 flex flex-col">
+              <div class="flex items-center text-xs text-gray-500 font-medium mb-3">
+                 <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                 {{ ev.eventDate | date:'dd MMM à HH:mm' }}
               </div>
 
-              <h3 class="text-xl lg:text-2xl font-bold text-slate-900 mb-6 leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 tracking-tightest">
+              <h3 class="text-xl font-bold text-gray-900 mb-4 leading-snug group-hover:text-teal-600 transition-colors line-clamp-2">
                 {{ ev.title }}
               </h3>
 
-              <div class="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
+              <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-lg grayscale shadow-inner">👨‍⚕️</div>
+                  <div class="w-8 h-8 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 text-sm font-bold">Dr</div>
                   <div class="flex flex-col">
-                    <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Conférencier</span>
-                    <span class="text-xs font-bold text-slate-700">Dr. {{ ev.organizerName }}</span>
+                    <span class="text-[10px] text-gray-500 font-medium leading-none mb-1 uppercase tracking-wider">Conférencier</span>
+                    <span class="text-xs font-bold text-gray-900">Dr. {{ ev.organizerName }}</span>
                   </div>
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
                   <button *ngIf="canJoinRoom(ev)"
                           [routerLink]="['/events', ev.id, 'room']"
                           (click)="$event.stopPropagation()"
-                          class="px-4 py-2 bg-red-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2 animate-bounce-subtle">
-                     <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse shadow-[0_0_8px_white]"></span>
-                     REJOINDRE LE LIVE
+                          class="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 group/btn">
+                     <span class="w-1.5 h-1.5 rounded-full bg-red-600 group-hover/btn:bg-white animate-pulse"></span>
+                     Live
                   </button>
-                  <div class="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all duration-300">
-                    <svg class="w-5 h-5 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  <div class="w-8 h-8 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 group-hover:bg-teal-600 group-hover:border-teal-600 group-hover:text-white transition-all duration-300">
+                    <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                   </div>
                 </div>
               </div>
@@ -112,18 +130,19 @@ import { catchError, of } from 'rxjs';
         </div>
 
         <!-- Empty State -->
-        <div *ngIf="events().length === 0" class="py-40 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
-           <div class="text-6xl mb-6 opacity-10">📖</div>
-           <p class="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Aucune conférence disponible pour le moment</p>
+        <div *ngIf="filteredEvents().length === 0" class="py-32 text-center bg-white rounded-2xl border border-gray-200 shadow-sm mt-8">
+           <div class="text-4xl mb-4 text-gray-300">
+              <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+           </div>
+           <p class="text-gray-500 font-medium text-sm">Aucune conférence disponible pour le moment</p>
         </div>
       </div>
     </div>
   `,
   styles: [`
-    .tracking-tightest { letter-spacing: -0.04em; }
     .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
   `]
 })
 export class EventPublicListComponent implements OnInit {
@@ -132,6 +151,20 @@ export class EventPublicListComponent implements OnInit {
   
   events = signal<MedicalEvent[]>([]);
   participations = signal<Map<number, MyParticipation>>(new Map());
+
+  searchQuery = signal('');
+  selectedSpecialization = signal('');
+  specializations = Object.values(Specialization);
+
+  filteredEvents = computed(() => {
+    const q = this.searchQuery().toLowerCase();
+    const spec = this.selectedSpecialization();
+    return this.events().filter(e => {
+      const matchQ = e.title.toLowerCase().includes(q) || (e.organizerName && e.organizerName.toLowerCase().includes(q));
+      const matchSpec = spec ? e.specialization === spec : true;
+      return matchQ && matchSpec;
+    });
+  });
 
   ngOnInit() {
     this.refreshEvents();

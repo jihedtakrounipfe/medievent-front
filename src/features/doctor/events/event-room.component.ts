@@ -28,220 +28,195 @@ interface ChatMessage {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-<div class="room-root">
-  <!-- Top Glass Header -->
-  <header class="room-header">
-    <div class="brand-zone">
-      <div class="logo-orb">
-        <div class="orb-inner"></div>
+<div class="h-screen bg-gray-950 font-sans text-gray-100 flex flex-col overflow-hidden">
+  <!-- Top Header -->
+  <header class="h-16 border-b border-gray-800 bg-gray-950/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-50">
+    <div class="flex items-center gap-4">
+      <div class="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-500">
+         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
       </div>
-      <div class="brand-text">
-        <h1 class="room-title">{{ eventTitle() || 'Conférence MediConnect' }}</h1>
-        <div class="room-meta">
-          <span class="live-status" [class.is-live]="streamActive()">
-            <span class="pulse-dot"></span>
-            {{ streamActive() ? 'SESSION EN DIRECT' : 'EN ATTENTE DU PRATICIEN' }}
+      <div>
+        <h1 class="text-sm font-bold text-gray-100 tracking-wide">{{ eventTitle() || 'Conférence MediConnect' }}</h1>
+        <div class="flex items-center gap-2 text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">
+          <span class="flex items-center gap-1.5" [class.text-emerald-500]="streamActive()">
+            <span class="w-1.5 h-1.5 rounded-full" [ngClass]="streamActive() ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'"></span>
+            {{ streamActive() ? 'En Direct' : 'En Attente' }}
           </span>
-          <span class="sep">/</span>
-          <span class="room-id">ID: {{ eventId }}</span>
+          <span>&bull;</span>
+          <span>ID: {{ eventId }}</span>
         </div>
       </div>
     </div>
 
-    <div class="session-stats-modern" *ngIf="streamActive()">
-      <div class="stat-box">
-        <div class="stat-icon-container">👥</div>
-        <div class="stat-content">
-          <span class="stat-value">{{ participants().length }}</span>
-          <span class="stat-label uppercase tracking-widest text-[8px]">In-Studio</span>
-        </div>
-      </div>
-      <div class="stat-divider-vertical"></div>
-      <div class="stat-box">
-        <div class="stat-icon-container animate-pulse-slow">📡</div>
-        <div class="stat-content">
-          <span class="stat-value text-emerald-400">Stable</span>
-          <span class="stat-label uppercase tracking-widest text-[8px]">Stream</span>
-        </div>
+    <div class="flex items-center gap-6" *ngIf="streamActive()">
+      <div class="flex items-center gap-2 text-xs font-medium text-gray-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        {{ participants().length }} Inscrits
       </div>
     </div>
 
-    <div class="header-actions">
-      <button (click)="leave()" class="btn-quit-premium">
-        <span>QUITTER</span>
+    <div class="flex items-center gap-3">
+      <button (click)="leave()" class="px-4 py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border border-gray-800">
+        Quitter
       </button>
-      <button *ngIf="isHost && streamActive()" (click)="endSession()" class="btn-terminate-premium">
-         STOP SESSION
+      <button *ngIf="isHost && streamActive()" (click)="endSession()" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors">
+         Terminer
       </button>
     </div>
   </header>
 
-  <main class="room-content">
-    <!-- Immersive Stage -->
-    <div class="video-stage">
-      <!-- Main Scene -->
-      <div class="scene-container" [class.screen-layout]="screenSharing()">
-        <video #mainVideo autoplay playsinline class="main-canvas"></video>
-        <div class="vignette-overlay"></div>
-        <div id="reactions-layer" class="reactions-portal"></div>
-      </div>
+  <main class="flex-1 flex min-h-0 relative">
+    <!-- Video Stage -->
+    <div class="flex-1 relative flex flex-col p-4 sm:p-6 bg-[#0a0a0c]">
+      <div class="flex-1 relative rounded-2xl overflow-hidden bg-black border border-gray-800 shadow-2xl flex items-center justify-center">
+        
+        <video #mainVideo autoplay playsinline class="absolute inset-0 w-full h-full object-cover"></video>
 
-      <!-- Preparation / Waiting State (MISSION CONTROL REDESIGN) -->
-      <div *ngIf="!streamActive()" class="stage-overlay mission-control-overlay">
-        <div class="cockpit-container">
-          <div class="cockpit-header">
-             <div class="pulse-status">
-                <span class="pulse-dot-large"></span>
-                PRE-FLIGHT CHECK
-             </div>
-             <p class="cockpit-id">Session: {{ eventId }}</p>
-          </div>
-
-          <div class="calibration-grid">
-             <div class="cal-item" [class.cal-ok]="cameraReady()">
-                <span class="cal-icon">{{ cameraReady() ? '✓' : '⚡' }}</span>
-                <div class="cal-info">
-                   <p class="cal-label">OPTICS</p>
-                   <p class="cal-status">{{ cameraReady() ? 'CALIBRATED' : 'SCANNING...' }}</p>
-                </div>
-             </div>
-             <div class="cal-item cal-ok">
-                <span class="cal-icon">✓</span>
-                <div class="cal-info">
-                   <p class="cal-label">SIGNAL</p>
-                   <p class="cal-status">STABLE 5.0ms</p>
-                </div>
-             </div>
-          </div>
-
-          <div class="hero-center animate-pulse-slow">
-            <h2 class="cockpit-title">{{ isHost ? 'Prêt pour le Direct ?' : 'Préparation du Flux...' }}</h2>
-            <p class="cockpit-desc">
-              {{ isHost ? 'Votre configuration est optimale. Les auditeurs attendent votre signal de diffusion.' : 'Communication établie. Le praticien initialise son studio. Préparez-vous.' }}
-            </p>
-          </div>
-          
-          <div class="cockpit-actions" *ngIf="isHost">
-             <button *ngIf="cameraReady()" (click)="startDiffusion()" class="btn-ignition">
-                <span class="btn-inner">INITIALISER LA DIFFUSION</span>
-                <div class="btn-flare"></div>
-             </button>
-             <div *ngIf="!cameraReady()" class="calibration-waiting">
-                <span class="spinner-pro"></span> 
-                {{ camError() || 'Calibrage des systèmes en cours...' }}
-             </div>
-          </div>
-
-          <div class="cockpit-footer">
-             <div class="waiting-counter">
-                <span class="count-value">{{ participants().length }}</span>
-                <span class="count-label">AUDITEURS EN ATTENTE</span>
-             </div>
+        <!-- Subtitles Overlay -->
+        <div *ngIf="isTranscribing() && currentTranscription()" 
+             class="absolute bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-6 pointer-events-none">
+          <div class="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-4 text-center">
+             <p class="text-lg md:text-xl font-medium text-white drop-shadow-md leading-relaxed" [dir]="isRTL() ? 'rtl' : 'ltr'">
+                {{ currentTranscription() }}
+             </p>
           </div>
         </div>
-      </div>
 
-      <!-- Floating HUD Controls (PROFESSIONAL SVG) -->
-      <div class="room-hud" *ngIf="streamActive()">
-        <div class="hud-pill shadow-2xl">
-          <!-- Primary Controls -->
-          <div class="hud-section" *ngIf="isHost">
-            <div class="host-label-hud">
-               <span class="host-dot"></span>
-               HOST
+        <!-- Waiting State Overlay -->
+        <div *ngIf="!streamActive()" class="absolute inset-0 z-20 flex items-center justify-center bg-gray-950/80 backdrop-blur-sm">
+          <div class="w-full max-w-md bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center shadow-xl">
+            <div class="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-6 text-2xl" [class.text-emerald-500]="cameraReady()" [class.text-amber-500]="!cameraReady()">
+               {{ cameraReady() ? '✓' : '⚙️' }}
             </div>
-            <button (click)="toggleMic()" class="control-btn" [class.off]="!micEnabled()" title="Microphone">
-              <svg *ngIf="micEnabled()" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-              <svg *ngIf="!micEnabled()" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-            </button>
-            <button (click)="toggleVideo()" class="control-btn" [class.off]="!videoEnabled()" title="Caméra">
-              <svg *ngIf="videoEnabled()" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"></path><rect width="14" height="12" x="2" y="6" rx="2" ry="2"></rect></svg>
-              <svg *ngIf="!videoEnabled()" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 6 4V4l-6 4"></path><path d="m7 2 1 2"></path><path d="m2 7 2 1"></path><path d="m2 2 20 20"></path><path d="M7 21v-4.5"></path><path d="M11 21v-4.5"></path><path d="M15 21v-4.5"></path></svg>
-            </button>
-            <div class="hud-divider"></div>
-            <button (click)="toggleScreenShare()" class="control-btn" [class.active]="screenSharing()" title="Partage d'écran">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-            </button>
-            <button (click)="simulateRecording()" class="control-btn rec-btn" [class.is-rec]="isRecording()" title="Enregistrer">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-            </button>
-          </div>
-
-          <!-- Participant Controls -->
-          <div class="hud-section" *ngIf="!isHost">
-            <button (click)="toggleFullscreen()" class="control-btn" title="Plein écran">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-            </button>
-            <button (click)="raiseHand()" class="control-btn" [class.active-hand]="handRaised()" title="Lever la main">
-               <span>✋</span>
-            </button>
-          </div>
-
-          <div class="hud-divider"></div>
-
-          <!-- Reaction Hub -->
-          <div class="hud-section reaction-group">
-            <button (click)="sendReaction('❤️')" class="emoji-btn">❤️</button>
-            <button (click)="sendReaction('👏')" class="emoji-btn">👏</button>
-            <button (click)="sendReaction('🔥')" class="emoji-btn">🔥</button>
-            <button (click)="sendReaction('💡')" class="emoji-btn">💡</button>
+            <h2 class="text-xl font-bold text-white mb-2">{{ isHost ? 'Prêt pour le direct ?' : 'Préparation du flux' }}</h2>
+            <p class="text-sm text-gray-400 mb-8 leading-relaxed">
+              {{ isHost ? 'Votre caméra et votre microphone sont calibrés. Vous pouvez démarrer la diffusion.' : 'Le praticien configure son espace de diffusion. La conférence va bientôt démarrer.' }}
+            </p>
+            
+            <div *ngIf="isHost">
+              <button *ngIf="cameraReady()" (click)="startDiffusion()" class="w-full py-3 px-4 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(13,148,136,0.3)]">
+                Démarrer la diffusion
+              </button>
+              <div *ngIf="!cameraReady()" class="flex items-center justify-center gap-3 text-sm font-bold text-amber-500">
+                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Calibrage en cours...
+              </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-800 flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-widest">
+               <span>Auditeurs en attente</span>
+               <span class="text-white bg-gray-800 px-2.5 py-0.5 rounded-md">{{ participants().length }}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Host PIP -->
-      <div *ngIf="isHost && streamActive()" class="pip-frame-premium shadow-2xl glass" [class.pip-expanded]="!screenSharing()">
-        <video #pipVideo autoplay muted playsinline class="pip-video-feed"></video>
-        <div class="pip-tag-premium">
-          <span class="live-dot"></span> MÉDECIN (VOUS)
+        <!-- HUD Controls -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-2xl shadow-xl" *ngIf="streamActive()">
+          <ng-container *ngIf="isHost">
+            <button (click)="toggleMic()" [class.text-red-500]="!micEnabled()" [class.bg-red-500_10]="!micEnabled()" class="w-12 h-12 rounded-xl flex items-center justify-center text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+              <svg *ngIf="micEnabled()" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+              <svg *ngIf="!micEnabled()" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+            </button>
+            <button (click)="toggleVideo()" [class.text-red-500]="!videoEnabled()" [class.bg-red-500_10]="!videoEnabled()" class="w-12 h-12 rounded-xl flex items-center justify-center text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+              <svg *ngIf="videoEnabled()" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <svg *ngIf="!videoEnabled()" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+            </button>
+            <div class="w-px h-8 bg-gray-800 mx-2"></div>
+            <button (click)="toggleScreenShare()" [class.text-teal-400]="screenSharing()" [class.bg-teal-500_10]="screenSharing()" class="w-12 h-12 rounded-xl flex items-center justify-center text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            </button>
+          </ng-container>
+
+          <!-- Transcription Control (Host & Spectator) -->
+          <div class="w-px h-8 bg-gray-800 mx-2"></div>
+          
+          <div class="relative group h-12 flex items-center">
+             <button (click)="toggleTranscription()" 
+                     [class.text-teal-400]="isTranscribing()" 
+                     [ngClass]="{'bg-teal-500/10': isTranscribing()}"
+                     class="w-12 h-12 rounded-xl flex items-center justify-center text-gray-300 hover:bg-gray-800 transition-all">
+                <span class="text-xs font-bold border-2 border-current px-1 rounded-md leading-none pt-0.5">CC</span>
+             </button>
+
+             <!-- Language Selector (Hover Popup) -->
+             <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pb-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-[100]">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-2 shadow-2xl flex flex-col gap-1 min-w-[140px]">
+                   <button *ngFor="let lang of languages" 
+                           (click)="setLanguage(lang.code)"
+                           class="px-3 py-2 text-[10px] font-bold text-left rounded-lg transition-colors flex items-center justify-between"
+                           [ngClass]="{'bg-teal-500/10': subtitleLanguage() === lang.code}"
+                           [class.text-teal-400]="subtitleLanguage() === lang.code"
+                           [class.text-gray-400]="subtitleLanguage() !== lang.code"
+                           [class.hover:bg-gray-800]="subtitleLanguage() !== lang.code">
+                      {{ lang.label }}
+                      <span *ngIf="subtitleLanguage() === lang.code" class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                   </button>
+                </div>
+             </div>
+          </div>
+
+          <ng-container *ngIf="!isHost">
+            <button (click)="toggleFullscreen()" class="w-12 h-12 rounded-xl flex items-center justify-center text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+            </button>
+            <button (click)="raiseHand()" [class.text-amber-500]="handRaised()" class="w-12 h-12 rounded-xl flex items-center justify-center text-gray-300 hover:bg-gray-800 transition-colors">
+               <span class="text-xl">✋</span>
+            </button>
+          </ng-container>
+        </div>
+
+        <!-- PIP (Host only) -->
+        <div *ngIf="isHost && streamActive()" class="absolute top-6 right-6 w-48 aspect-[4/3] rounded-xl overflow-hidden border border-gray-700 shadow-2xl bg-black z-30 transition-all duration-500" [class.w-64]="!screenSharing()">
+          <video #pipVideo autoplay muted playsinline class="w-full h-full object-cover -scale-x-100"></video>
+          <div class="absolute bottom-2 left-2 bg-gray-900/80 backdrop-blur text-[9px] font-bold px-2 py-1 rounded text-gray-300 flex items-center gap-1.5 border border-gray-700">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            MÉDECIN
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Sidebar Chat (Ultra Modern) -->
-    <aside class="room-sidebar-premium">
-      <div class="sidebar-container glass">
-        <div class="sidebar-top-tab">
-          <div class="tab-header">
-            <h3>DISCUSSION EN DIRECT</h3>
-            <span class="live-count-badge">{{ participants().length }}</span>
-          </div>
-          <p class="tab-subtitle">Posez vos questions au praticien</p>
-        </div>
+    <!-- Chat Sidebar -->
+    <aside class="w-80 border-l border-gray-800 bg-gray-950 flex flex-col shrink-0">
+      <div class="p-5 border-b border-gray-800">
+        <h3 class="text-xs font-bold text-gray-100 uppercase tracking-widest flex items-center justify-between">
+          Discussion
+          <span class="bg-gray-800 text-gray-400 px-2 py-0.5 rounded text-[10px]">{{ messages().length }}</span>
+        </h3>
+      </div>
 
-        <div #chatContainer class="chat-feed-modern">
-          <div *ngFor="let msg of messages()" class="modern-msg" [class.is-mine]="isMe(msg)" [class.is-doctor]="msg.role === 'DOCTOR'">
-            <div class="msg-meta">
-              <span class="msg-author">{{ msg.sender }}</span>
-              <span class="msg-badge" *ngIf="msg.role === 'DOCTOR'">DOCTEUR</span>
-            </div>
-            
-            <div (click)="setReply(msg)" class="msg-block shadow-sm">
-              <div *ngIf="msg.replyTo" class="msg-reply-hint">
-                <span class="reply-name">&#64;{{ msg.replyToSender }}</span>
-                <p class="reply-snippet">{{ msg.replyTo }}</p>
-              </div>
-              <p class="msg-content-text">{{ msg.content }}</p>
-            </div>
-            
-            <span class="msg-timestamp">{{ msg.timestamp | date:'HH:mm' }}</span>
+      <div #chatContainer class="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
+        <div *ngFor="let msg of messages()" class="flex flex-col max-w-[90%] text-sm" [class.ml-auto]="isMe(msg)">
+          <div class="flex items-center gap-2 mb-1.5" [class.flex-row-reverse]="isMe(msg)">
+            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{{ msg.sender }}</span>
+            <span *ngIf="msg.role === 'DOCTOR'" class="text-[8px] font-bold bg-teal-500/20 text-teal-400 px-1.5 py-0.5 rounded border border-teal-500/20">DOC</span>
           </div>
+          <div (click)="setReply(msg)" class="group cursor-pointer rounded-2xl px-4 py-2.5 relative border"
+               [ngClass]="{
+                 'bg-teal-600 border-teal-500 text-white rounded-tr-sm': isMe(msg),
+                 'bg-gray-900 border-gray-800 text-gray-300 rounded-tl-sm hover:border-gray-700': !isMe(msg) && msg.role !== 'DOCTOR',
+                 'bg-teal-500/10 border-teal-500/30 text-gray-200 rounded-tl-sm': !isMe(msg) && msg.role === 'DOCTOR'
+               }">
+            <div *ngIf="msg.replyTo" class="mb-2 p-2 bg-black/20 rounded-xl border-l-2 border-current opacity-80 text-xs">
+              <span class="font-bold mr-1">&#64;{{ msg.replyToSender }}</span>
+              <span class="truncate block opacity-75">{{ msg.replyTo }}</span>
+            </div>
+            <p class="leading-relaxed">{{ msg.content }}</p>
+          </div>
+          <span class="text-[9px] text-gray-600 font-medium mt-1 mx-1" [class.text-right]="isMe(msg)">{{ msg.timestamp | date:'HH:mm' }}</span>
         </div>
+      </div>
 
-        <div class="chat-bottom-compose">
-          <div *ngIf="replyingTo()" class="replying-to-bar glass-medium">
-            <div class="reply-details">
-              <span class="reply-to-author">Rép. à <b>{{ replyingTo()?.sender }}</b></span>
-            </div>
-            <button (click)="replyingTo.set(null)" class="reply-close">×</button>
-          </div>
-          
-          <div class="input-modern-wrapper glass shadow-inner">
-            <input [(ngModel)]="currentMsg" (keyup.enter)="sendChat()" placeholder="Exprimez-vous...">
-            <button (click)="sendChat()" class="btn-send-modern" [disabled]="!currentMsg.trim()">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </button>
-          </div>
+      <div class="p-4 border-t border-gray-800 bg-gray-950">
+        <div *ngIf="replyingTo()" class="mb-3 px-3 py-2 bg-gray-900 border border-gray-800 rounded-xl flex items-center justify-between text-xs">
+          <span class="text-gray-400">En réponse à <b class="text-gray-200">{{ replyingTo()?.sender }}</b></span>
+          <button (click)="replyingTo.set(null)" class="text-gray-500 hover:text-gray-300">✕</button>
+        </div>
+        <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-xl p-1.5 focus-within:border-gray-600 transition-colors">
+          <input [(ngModel)]="currentMsg" (keyup.enter)="sendChat()" type="text" placeholder="Envoyer un message..." class="flex-1 bg-transparent border-none text-sm text-gray-100 placeholder-gray-600 px-3 py-2 focus:outline-none focus:ring-0">
+          <button (click)="sendChat()" [disabled]="!currentMsg.trim()" class="w-8 h-8 rounded-lg bg-gray-800 text-gray-400 flex items-center justify-center disabled:opacity-50 hover:bg-gray-700 hover:text-white transition-colors">
+             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
         </div>
       </div>
     </aside>
@@ -249,196 +224,8 @@ interface ChatMessage {
 </div>
   `,
   styles: [`
-    :host { 
-        --primary: #0d9488; 
-        --primary-glow: rgba(13, 148, 136, 0.4);
-        --danger: #ef4444;
-        --dark-bg: #030303;
-        --card-bg: rgba(15, 15, 18, 0.85);
-        --glass-border: rgba(255, 255, 255, 0.08);
-    }
-
-    .room-root { height: 100vh; display: flex; flex-direction: column; background: var(--dark-bg); font-family: 'Outfit', sans-serif; color: #f8fafc; overflow: hidden; }
-
-    /* Header */
-    .room-header { height: 85px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; background: rgba(3,3,3,0.8); backdrop-filter: blur(25px); border-bottom: 1px solid var(--glass-border); z-index: 100; }
-    .brand-zone { display: flex; align-items: center; gap: 20px; }
-    .logo-orb { width: 44px; height: 44px; background: var(--primary); border-radius: 14px; position: relative; overflow: hidden; }
-    .orb-inner { position: absolute; inset: 10px; border: 3px solid #000; border-radius: 8px; }
-    .room-title { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; margin: 0; background: linear-gradient(to right, #fff, #999); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .room-meta { font-size: 10px; font-weight: 800; color: #444; display: flex; gap: 8px; margin-top: 4px; }
-    .live-status { display: flex; align-items: center; gap: 8px; color: #f59e0b; }
-    .live-status.is-live { color: #10b981; }
-    .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-    .is-live .pulse-dot { animation: pulse-ring 2s infinite; }
-
-    .session-stats { display: flex; align-items: center; gap: 30px; background: rgba(255,255,255,0.03); padding: 10px 28px; border-radius: 100px; border: 1px solid var(--glass-border); }
-    .stat-item { display: flex; align-items: center; gap: 10px; }
-    .stat-value { font-size: 15px; font-weight: 950; font-family: tabular-nums; }
-    .stat-label { font-size: 9px; font-weight: 800; opacity: 0.3; text-transform: uppercase; letter-spacing: 1px; }
-
-    .btn-quit-premium { padding: 12px 28px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #999; border-radius: 18px; font-size: 12px; font-weight: 900; cursor: pointer; transition: 0.3s; }
-    .btn-quit-premium:hover { background: var(--danger); color: #fff; border-color: transparent; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4); transform: translateY(-2px); }
-    .btn-terminate-premium { padding: 12px 28px; background: var(--danger); border: none; color: #fff; border-radius: 18px; font-size: 12px; font-weight: 950; cursor: pointer; transition: 0.3s; box-shadow: 0 15px 35px rgba(239, 68, 68, 0.3); margin-left: 15px; }
-
-    /* Content Layout */
-    .room-content { flex: 1; display: flex; padding: 25px; gap: 25px; min-height: 0; }
-    .video-stage { flex: 1; position: relative; background: #000; border-radius: 45px; overflow: hidden; box-shadow: 0 60px 120px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.03); }
-    .main-canvas { width: 100%; height: 100%; object-fit: cover; transition: filter 0.5s ease; }
-    .vignette-overlay { position: absolute; inset: 0; box-shadow: inset 0 0 200px rgba(0,0,0,0.9); pointer-events: none; }
-
-    /* Preparation Overlay */
-    .stage-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 60; }
-    .glass-heavy { background: rgba(3, 3, 3, 0.7); backdrop-filter: blur(30px); }
-    .hero-card { background: var(--card-bg); padding: 50px; border-radius: 40px; border: 1px solid var(--glass-border); text-align: center; max-width: 500px; transform: translateY(0); animation: slide-up-hero 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-    .hero-icon-container { width: 100px; height: 100px; margin: 0 auto 30px; position: relative; display: flex; align-items: center; justify-content: center; }
-    .hero-emoji { font-size: 50px; z-index: 2; }
-    .hero-ring { position: absolute; inset: 0; border: 2px solid var(--primary); border-radius: 50%; animation: pulse-ring 2s infinite; opacity: 0.5; }
-    .hero-title { font-size: 28px; font-weight: 900; margin-bottom: 15px; }
-    .hero-desc { color: #94a3b8; line-height: 1.6; margin-bottom: 35px; }
-    .hero-actions { display: flex; flex-direction: column; align-items: center; gap: 20px; position: relative; z-index: 70; }
-    
-    .btn-launch-glow { 
-        padding: 18px 45px; background: var(--primary); color: #000; border: none; border-radius: 20px; 
-        font-size: 16px; font-weight: 950; cursor: pointer; transition: 0.4s;
-        box-shadow: 0 20px 40px var(--primary-glow);
-        position: relative; overflow: hidden;
-        pointer-events: auto !important;
-    }
-    .btn-launch-glow:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 30px 60px var(--primary-glow); }
-    .btn-launch-glow::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transform: translateX(-100%); transition: 0.6s; }
-    .btn-launch-glow:hover::after { transform: translateX(100%); }
-
-    .status-warning { display: flex; align-items: center; gap: 12px; color: #94a3b8; font-size: 14px; font-weight: 700; }
-    .spinner { width: 20px; height: 20px; border: 2px solid rgba(13, 148,136, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
-
-    @keyframes slide-up-hero { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Mission Control Modern Redesign */
-    .mission-control-overlay { 
-        background: radial-gradient(circle at center, #0a0a0c 0%, #000 100%);
-        display: flex; align-items: center; justify-content: center; z-index: 200;
-    }
-    .cockpit-container { 
-        width: 80%; max-width: 900px; background: rgba(255,255,255,0.02);
-        border: 1px solid rgba(255,255,255,0.05); border-radius: 40px;
-        padding: 60px; backdrop-filter: blur(40px);
-        box-shadow: 0 100px 200px rgba(0,0,0,0.8);
-        text-align: center; position: relative; overflow: hidden;
-    }
-    .cockpit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 50px; opacity: 0.5; }
-    .session-stats-modern { display: flex; align-items: center; gap: 20px; background: rgba(255,255,255,0.03); padding: 8px 25px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.05); }
-    .stat-box { display: flex; align-items: center; gap: 12px; }
-    .stat-icon-container { width: 32px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-    .stat-content { display: flex; flex-direction: column; }
-    .stat-value { font-size: 15px; font-weight: 950; color: #fff; line-height: 1; }
-    .stat-label { font-size: 7px; color: #555; margin-top: 2px; }
-    .stat-divider-vertical { width: 1px; height: 20px; background: rgba(255,255,255,0.1); }
-
-    .pulse-status { display: flex; align-items: center; gap: 10px; font-size: 10px; font-weight: 950; color: #fff; letter-spacing: 2px; }
-    .pulse-dot-large { width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; box-shadow: 0 0 15px #3b82f6; animation: pulse-ring 2s infinite; }
-    .cockpit-id { font-size: 10px; font-weight: 900; color: #fff; opacity: 0.5; }
-
-    .calibration-grid { display: grid; grid-cols: 2; display: flex; justify-content: center; gap: 30px; margin-bottom: 60px; }
-    .cal-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 15px 25px; border-radius: 20px; display: flex; align-items: center; gap: 15px; min-width: 200px; transition: 0.5s; opacity: 0.4; filter: grayscale(1); }
-    .cal-item.cal-ok { opacity: 1; filter: grayscale(0); border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.05); }
-    .cal-icon { font-size: 18px; font-weight: 950; color: #3b82f6; }
-    .cal-label { font-size: 8px; font-weight: 950; color: #fff; opacity: 0.4; letter-spacing: 1px; margin: 0; }
-    .cal-status { font-size: 11px; font-weight: 950; color: #fff; margin: 2px 0 0 0; }
-
-    .hero-center { margin-bottom: 60px; }
-    .cockpit-title { font-size: 44px; font-weight: 950; color: #fff; margin-bottom: 20px; letter-spacing: -1px; }
-    .cockpit-desc { font-size: 16px; color: #666; max-width: 600px; margin: 0 auto; line-height: 1.6; }
-
-    .btn-ignition { 
-        position: relative; padding: 25px 60px; background: #fff; color: #000; 
-        border-radius: 24px; font-size: 16px; font-weight: 950; border: none; cursor: pointer;
-        transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden;
-        box-shadow: 0 40px 80px rgba(255,255,255,0.15);
-    }
-    .btn-ignition:hover { transform: scale(1.05) translateY(-5px); box-shadow: 0 50px 100px rgba(255,255,255,0.25); }
-    .btn-flare { position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent); skew-x: -25deg; animation: flare 3s infinite; }
-    @keyframes flare { 0% { left: -100%; } 20% { left: 150%; } 100% { left: 150%; } }
-
-    .calibration-waiting { display: flex; align-items: center; gap: 15px; color: #444; font-size: 14px; font-weight: 800; justify-content: center; }
-    .spinner-pro { width: 22px; height: 22px; border: 2px solid rgba(255,255,255,0.05); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
-
-    .cockpit-footer { margin-top: 60px; border-top: 1px solid rgba(255,255,255,0.05); pt: 40px; }
-    .waiting-counter { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-    .count-value { font-size: 32px; font-weight: 950; color: #fff; font-family: tabular-nums; }
-    .count-label { font-size: 9px; font-weight: 950; color: #444; letter-spacing: 2px; }
-
-    .animate-pulse-slow { animation: pulse-slow 4s infinite ease-in-out; }
-    @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-
-    /* HUD Pill Redesign (SAAS PROFESSIONAL) */
-    .room-hud { position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); z-index: 50; }
-    .hud-pill { background: rgba(10, 10, 15, 0.75); backdrop-filter: blur(40px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 100px; padding: 8px 12px; display: flex; align-items: center; gap: 4px; }
-    .hud-section { display: flex; gap: 8px; padding: 0 12px; }
-    .control-btn { width: 50px; height: 50px; border-radius: 50%; border: none; background: rgba(255,255,255,0.03); color: #cbd5e1; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
-    .control-btn:hover { background: rgba(255,255,255,0.08); color: #fff; transform: translateY(-3px); }
-    .control-btn.off { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
-    .control-btn.active { background: rgba(13, 148, 136, 0.15); color: #2dd4bf; border: 1px solid rgba(13, 148, 136, 0.2); }
-    .control-btn.is-rec { color: #ef4444; animation: pulse-red 1.5s infinite; }
-    .control-btn.active-hand { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
-    .hud-divider { width: 1px; height: 28px; background: rgba(255,255,255,0.1); margin: 0 10px; }
-    .emoji-btn { font-size: 24px; background: none; border: none; cursor: pointer; transition: 0.3s; padding: 0 12px; filter: grayscale(0.2); }
-    .emoji-btn:hover { transform: scale(1.4) translateY(-12px); filter: grayscale(0); }
-
-    /* PIP Redesign */
-    .pip-frame-premium { position: absolute; top: 35px; right: 35px; width: 220px; border-radius: 28px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 40px 80px rgba(0,0,0,0.6); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-    .pip-frame-premium.pip-expanded { width: 330px; }
-    .pip-video-feed { width: 100%; display: block; transform: scaleX(-1); }
-    .pip-tag-premium { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); padding: 5px 12px; border-radius: 12px; font-size: 10px; font-weight: 950; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.05); }
-    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981; }
-
-    /* Sidebar Redesign */
-    .room-sidebar-premium { width: 420px; display: flex; flex-direction: column; }
-    .sidebar-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; border-radius: 45px; background: var(--card-bg); border: 1px solid var(--glass-border); }
-    .sidebar-top-tab { padding: 35px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .tab-header h3 { font-size: 13px; font-weight: 950; color: #555; letter-spacing: 1.5px; margin: 0; }
-    .live-count-badge { background: rgba(13, 148, 136, 0.1); color: #2dd4bf; font-size: 11px; font-weight: 950; padding: 5px 15px; border-radius: 100px; }
-    .tab-subtitle { font-size: 14px; color: #777; margin: 0; font-weight: 600; }
-
-    .host-label-hud { 
-        display: flex; align-items: center; gap: 8px; padding: 0 15px; 
-        background: rgba(13, 148, 136, 0.1); border: 1px solid rgba(13, 148, 136, 0.2); 
-        border-radius: 12px; color: var(--primary); font-size: 9px; font-weight: 950; 
-        letter-spacing: 1px; margin-right: 5px; 
-    }
-    .host-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
-
-    .chat-feed-modern { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 24px; scrollbar-width: none; }
-    .modern-msg { display: flex; flex-direction: column; max-width: 88%; animation: float-up 0.5s ease-out; }
-    .modern-msg.is-mine { align-self: flex-end; }
-    .msg-meta { margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
-    .msg-author { font-size: 12px; font-weight: 800; color: #666; }
-    .msg-badge { background: var(--primary); color: #000; font-size: 9px; font-weight: 950; padding: 2px 8px; border-radius: 6px; }
-    .msg-block { padding: 16px 20px; border-radius: 24px; background: rgba(255,255,255,0.04); color: #cbd5e1; font-size: 15px; line-height: 1.6; cursor: pointer; transition: 0.3s; position: relative; }
-    .is-mine .msg-block { background: var(--primary); color: #000; font-weight: 600; border-bottom-right-radius: 6px; }
-    .is-doctor .msg-block { border: 1.5px solid var(--primary); background: rgba(13, 148, 136, 0.05); }
-    .msg-timestamp { font-size: 10px; color: #444; margin-top: 6px; font-weight: 700; align-self: flex-end; }
-
-    .msg-reply-hint { background: rgba(0,0,0,0.15); padding: 10px 14px; border-radius: 15px; margin-bottom: 10px; border-left: 3px solid rgba(255,255,255,0.3); }
-    .reply-name { font-size: 11px; font-weight: 950; opacity: 0.6; }
-    .reply-snippet { font-size: 12px; margin: 4px 0 0; opacity: 0.7; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-
-    .chat-bottom-compose { padding: 30px; background: rgba(0,0,0,0.25); }
-    .replying-to-bar { margin-bottom: 15px; padding: 12px 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(13, 148, 136, 0.25); background: rgba(13, 148, 136, 0.05); }
-    .reply-to-author { font-size: 12px; color: var(--primary-glow); }
-    .reply-close { background: none; border: none; color: #ef4444; font-size: 20px; cursor: pointer; }
-    .input-modern-wrapper { display: flex; gap: 12px; padding: 8px; border-radius: 28px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); }
-    .input-modern-wrapper input { flex: 1; background: transparent; border: none; padding: 12px 20px; color: #fff; font-size: 15px; outline: none; }
-    .btn-send-modern { width: 55px; height: 55px; border-radius: 22px; background: var(--primary); color: #000; border: none; cursor: pointer; transition: 0.4s; display: flex; align-items: center; justify-content: center; }
-    .btn-send-modern:disabled { opacity: 0.2; transform: scale(0.9); }
-    .btn-send-modern:hover:not(:disabled) { transform: rotate(10deg) scale(1.1); box-shadow: 0 10px 25px var(--primary-glow); }
-
-    /* Animations */
-    @keyframes pulse-ring { 0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
-    @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; transform: scale(0.95); } }
-    @keyframes float-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .bg-red-500_10 { background-color: rgba(239, 68, 68, 0.1); }
+    .bg-teal-500_10 { background-color: rgba(20, 184, 166, 0.1); }
   `]
 })
 export class VirtualRoomComponent implements OnInit, OnDestroy {
@@ -452,6 +239,17 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
   cameraReady = signal(false); camError = signal(''); currentMsg = '';
   micEnabled = signal(true); videoEnabled = signal(true); screenSharing = signal(false);
   isRecording = signal(false); handRaised = signal(false); replyingTo = signal<ChatMessage | null>(null);
+
+  // Transcription
+  isTranscribing = signal(false);
+  currentTranscription = signal('');
+  subtitleLanguage = signal('fr-FR');
+  private recognition: any = null;
+  languages = [
+    { code: 'fr-FR', label: 'Français' },
+    { code: 'en-US', label: 'English' },
+    { code: 'ar-SA', label: 'العربية' }
+  ];
 
   isHost = false; eventId: string | null = null; me: any = null;
   private peer: any = null; 
@@ -472,6 +270,7 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
     this.eventId = this.route.snapshot.paramMap.get('id');
     this.authFacade.currentUser$.subscribe(user => { if (user) { this.me = user; if (this.eventId) this.resolveRole(); } });
     this.initChat();
+    this.initSpeech();
   }
   ngOnDestroy() { this.cleanup(); }
 
@@ -486,6 +285,55 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
         }
         this.startParticipantPolling(); this.loadPeerJS();
       }
+    });
+  }
+
+  // --- TRANSCRIPTION LOGIC ---
+  private initSpeech() {
+    const Speech = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Speech) return;
+    this.recognition = new Speech();
+    this.recognition.continuous = true;
+    this.recognition.interimResults = true;
+    this.recognition.lang = this.subtitleLanguage();
+
+    this.recognition.onresult = (event: any) => {
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) final += event.results[i][0].transcript;
+      }
+      if (final.trim() && this.isHost) {
+        this.sendTranscriptionToAll(final);
+      }
+    };
+    this.recognition.onerror = () => { if (this.isTranscribing()) setTimeout(() => this.recognition.start(), 1000); };
+  }
+
+  toggleTranscription() {
+    this.isTranscribing.set(!this.isTranscribing());
+    if (this.isHost && this.recognition) {
+      if (this.isTranscribing()) this.recognition.start();
+      else this.recognition.stop();
+    }
+  }
+
+  setLanguage(l: string) {
+    this.subtitleLanguage.set(l);
+    if (this.recognition) {
+       this.recognition.lang = l;
+       if (this.isTranscribing() && this.isHost) {
+          this.recognition.stop();
+          setTimeout(() => this.recognition.start(), 300);
+       }
+    }
+  }
+
+  isRTL() { return this.subtitleLanguage().startsWith('ar'); }
+
+  private sendTranscriptionToAll(text: string) {
+    this.stompClient?.publish({
+      destination: `/app/chat/${this.eventId}/send`,
+      body: JSON.stringify({ sender: 'SYSTEM', content: `[CC] ${text}`, role: 'DOCTOR', timestamp: new Date().toISOString() })
     });
   }
 
@@ -533,14 +381,6 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
   simulateRecording() { this.isRecording.set(!this.isRecording()); }
   toggleFullscreen() { const e = this.mainVideoRef?.nativeElement; if (e?.requestFullscreen) e.requestFullscreen(); }
   raiseHand() { this.handRaised.set(!this.handRaised()); this.sendChatInternal(this.handRaised() ? '✋ A levé la main' : '🤚 A baissé la main', true); }
-  sendReaction(emoji: string) { this.sendChatInternal('[REACT] ' + emoji, true); this.showFloatingReaction(emoji); }
-
-  private showFloatingReaction(emoji: string) {
-     const l = document.getElementById('reactions-layer'); if (!l) return;
-     const d = document.createElement('div'); d.innerText = emoji; d.className = 'float-up-animation';
-     d.style.position = 'absolute'; d.style.left = (50 + (Math.random()*20 - 10)) + '%'; d.style.bottom = '100px'; d.style.fontSize = '55px';
-     l.appendChild(d); setTimeout(() => d.remove(), 2500);
-  }
 
   private initChat() {
     const s = new SockJS(`${environment.apiUrl}/ws-mediconnect`);
@@ -548,7 +388,15 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
     this.stompClient.onConnect = () => {
       this.stompClient?.subscribe(`/topic/chat/${this.eventId}`, (p) => {
         const m = JSON.parse(p.body);
-        this.zone.run(() => { if (m.content.startsWith('[REACT]')) this.showFloatingReaction(m.content.split(' ')[1]); else { this.messages.update(old => [...old, m]); this.scrollToBottom(); } });
+        this.zone.run(() => { 
+          if (m.content.startsWith('[CC]')) {
+            this.currentTranscription.set(m.content.replace('[CC] ', ''));
+            setTimeout(() => this.currentTranscription.set(''), 4000);
+          } else {
+            this.messages.update(old => [...old, m]); 
+            this.scrollToBottom(); 
+          }
+        });
       });
     };
     this.stompClient.activate();
@@ -592,7 +440,6 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
       this.activeConnections.add(c);
       c.on('stream', (s: MediaStream) => this.zone.run(() => { 
         this.streamActive.set(true);
-        // Wait for Angular to render the DOM before setting srcObject
         setTimeout(() => {
           if (this.mainVideoRef?.nativeElement) {
             this.mainVideoRef.nativeElement.srcObject = s;
@@ -605,13 +452,10 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
   }
   private async startHostCamera() { 
     try { 
-      console.log('[MEDIA] Requesting camera/mic...');
       this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); 
-      console.log('[MEDIA] Camera access granted');
       this.cameraReady.set(true); 
       this.localStream.getTracks().forEach(t => this.broadcastStream.addTrack(t));
     } catch (e: any) { 
-      console.warn('[MEDIA] Camera access failed, using mocks:', e);
       this.camError.set('Caméra indisponible - Mode Simulation'); 
       this.localStream = this.createMockStream();
       this.cameraReady.set(true);
@@ -620,87 +464,35 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
   }
 
   private createMockStream(): MediaStream {
-    const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 480;
+    const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 480;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = '#0d9488';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '30px Outfit, sans-serif';
-      ctx.textAlign = 'center';
+      ctx.fillStyle = '#0d9488'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff'; ctx.font = '30px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('Caméra Indisponible', canvas.width / 2, canvas.height / 2);
     }
-    const canvasStream = canvas.captureStream(15);
-    
-    // Create silent audio track
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const dest = audioCtx.createMediaStreamDestination();
-      const audioTrack = dest.stream.getAudioTracks()[0];
-      if (audioTrack) {
-        canvasStream.addTrack(audioTrack);
-      }
-    } catch (err) {
-      console.warn('AudioContext not supported, simulation without audio track');
-    }
-    
-    // Simple animation to keep the stream alive
-    let dotCount = 0;
-    setInterval(() => {
-        if (ctx) {
-            ctx.fillStyle = '#0d9488';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#ffffff';
-            dotCount = (dotCount + 1) % 4;
-            const dots = '.'.repeat(dotCount);
-            ctx.fillText('Mode Simulation' + dots, canvas.width / 2, canvas.height / 2);
-        }
-    }, 1000);
-
+    const canvasStream = (canvas as any).captureStream(15);
     return canvasStream;
   }
   
   startDiffusion() { 
-    console.log('[DIFFUSION] Start requested. eventId:', this.eventId, 'peerId:', this.myPeerId());
-    if (!this.localStream) { console.error('[DIFFUSION] No local stream'); alert('Stream local introuvable !'); return; }
-    if (!this.eventId || !this.myPeerId()) { console.error('[DIFFUSION] Missing params'); alert('Paramètres de session manquants !'); return; }
-    
-    console.log('[DIFFUSION] Registering host on backend...');
+    if (!this.localStream || !this.eventId || !this.myPeerId()) return;
     this.eventService.registerHost(this.eventId, this.myPeerId()).subscribe({
       next: () => {
-        console.log('[DIFFUSION] Backend registration successful');
         this.zone.run(() => {
           this.streamActive.set(true);
-          console.log('[DIFFUSION] Session active. Updating UI...');
-          
-          // Wait for Angular to render *ngIf elements
           setTimeout(() => {
-            if (this.mainVideoRef?.nativeElement) {
-              this.mainVideoRef.nativeElement.srcObject = this.localStream;
-              this.mainVideoRef.nativeElement.play().catch(() => {});
-            }
-            if (this.pipVideoRef?.nativeElement) {
-              this.pipVideoRef.nativeElement.srcObject = this.localStream;
-              this.pipVideoRef.nativeElement.play().catch(() => {});
-            }
+            if (this.mainVideoRef?.nativeElement) { this.mainVideoRef.nativeElement.srcObject = this.localStream; this.mainVideoRef.nativeElement.play().catch(() => {}); }
+            if (this.pipVideoRef?.nativeElement) { this.pipVideoRef.nativeElement.srcObject = this.localStream; this.pipVideoRef.nativeElement.play().catch(() => {}); }
           }, 200);
-          
           this.triggerBroadcast();
           this.startPollingSpectators();
         });
-      },
-      error: (err) => {
-        const errorMsg = err.error?.message || err.message || 'Erreur inconnue';
-        alert("Échec du démarrage : " + errorMsg);
-        console.error('[DIFFUSION] Error:', err);
       }
     });
   }
 
   private startPollingSpectators() { this.pollTimer = setInterval(() => this.triggerBroadcast(), 4000); }
-
   private triggerBroadcast() {
     this.eventService.getSpectators(this.eventId!).subscribe(d => { 
       const spectators = (d.spectators || []) as string[];
@@ -716,18 +508,16 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
       }); 
     });
   }
-
   private startParticipantPolling() { this.participantPollTimer = setInterval(() => { if (this.eventId) this.eventService.getEventParticipants(Number(this.eventId)).subscribe(l => this.participants.set(l)); }, 8000); }
   leave() { 
     if (!this.isHost && this.eventId && this.myPeerId()) this.eventService.unregisterSpectator(this.eventId, this.myPeerId()).subscribe(); 
     this.cleanup(); 
-    const target = this.isHost ? '/doctor/events/my' : '/events';
-    this.router.navigate([target]); 
+    this.router.navigate([this.isHost ? '/doctor/events/my' : '/events']); 
   }
   endSession() { 
     if (this.eventId) this.eventService.unregisterHost(this.eventId).subscribe(); 
     this.cleanup(); 
     this.router.navigate(['/doctor/events/my']); 
   }
-  private cleanup() { clearInterval(this.pollTimer); clearInterval(this.participantPollTimer); this.localStream?.getTracks().forEach(t => t.stop()); this.screenStream?.getTracks().forEach(t => t.stop()); this.peer?.destroy(); this.stompClient?.deactivate(); }
+  private cleanup() { clearInterval(this.pollTimer); clearInterval(this.participantPollTimer); this.localStream?.getTracks().forEach(t => t.stop()); this.screenStream?.getTracks().forEach(t => t.stop()); this.peer?.destroy(); this.stompClient?.deactivate(); if (this.recognition) this.recognition.stop(); }
 }

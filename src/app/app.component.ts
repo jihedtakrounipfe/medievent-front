@@ -26,6 +26,7 @@ export class AppComponent {
   private router = inject(Router);
   isAdminRoute = signal(false);
   isRoomRoute = signal(false);
+  isAdminLogin = signal(false);
 
   constructor() {
     this.router.events.pipe(
@@ -34,8 +35,10 @@ export class AppComponent {
       const url = e.urlAfterRedirects;
       this.isAdminRoute.set(url.startsWith('/admin'));
       this.isRoomRoute.set(url.includes('/room'));
+      this.isAdminLogin.set(url.startsWith('/admin/login'));
     });
     this.isAdminRoute.set(this.router.url.startsWith('/admin'));
     this.isRoomRoute.set(this.router.url.includes('/room'));
+    this.isAdminLogin.set(this.router.url.startsWith('/admin/login'));
   }
 }

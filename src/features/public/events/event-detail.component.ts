@@ -12,173 +12,196 @@ import { catchError, of, Subscription } from 'rxjs';
   imports: [CommonModule, RouterModule],
   template: `
     <!-- MAIN DETAIL VIEW -->
-    <div *ngIf="!notFound()" class="min-h-screen bg-slate-50/50 pb-32 font-sans text-slate-900 animate-fade-in">
+    <div *ngIf="!notFound()" class="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900">
       
-      <!-- Top Bar / Back button -->
-      <div class="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <a (click)="goBack()" class="flex items-center gap-3 text-slate-400 hover:text-slate-900 transition-all font-bold text-xs uppercase tracking-widest cursor-pointer group">
-            <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            Retour
-          </a>
-          <div class="flex items-center gap-3">
-             <span *ngIf="isOnline(event())" class="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20">🌐 Session Live</span>
-             <span class="px-4 py-1.5 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">{{ formatLabel(event()?.specialization || 'Spécialité') }}</span>
+      <!-- Back Nav -->
+      <div class="bg-white border-b border-gray-200">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <button (click)="goBack()" class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Retour aux événements
+          </button>
+          <div class="flex gap-2">
+            <span *ngIf="isOnline(event())" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <svg class="mr-1.5 h-2 w-2 text-blue-500" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" /></svg>
+              En Ligne
+            </span>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+              {{ formatLabel(event()?.specialization || 'Général') }}
+            </span>
           </div>
         </div>
-      </div>
+      </div>      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <!-- Hero Banner -->
+        <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden mb-8 group">
+          <div class="h-80 sm:h-96 w-full bg-gray-100 relative overflow-hidden">
+            <img *ngIf="event()?.bannerUrl" [src]="event()?.bannerUrl" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Event Banner">
+            <div *ngIf="!event()?.bannerUrl" class="w-full h-full bg-gradient-to-br from-teal-600 via-teal-700 to-indigo-900 flex items-center justify-center">
+              <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+              <svg class="w-32 h-32 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+            </div>
+            <div class="absolute top-6 left-6 flex gap-2">
+               <span *ngIf="isOnline(event())" class="px-4 py-1.5 rounded-full text-xs font-bold bg-white/90 backdrop-blur-md text-blue-600 shadow-lg flex items-center gap-2">
+                 <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                 Virtual Infrastructure
+               </span>
+               <span class="px-4 py-1.5 rounded-full text-xs font-bold bg-white/90 backdrop-blur-md text-teal-600 shadow-lg uppercase tracking-wider">
+                 {{ formatLabel(event()?.specialization || 'Général') }}
+               </span>
+            </div>
+          </div>
+          <div class="p-10 relative">
+            <div class="absolute -top-12 right-10 flex items-center gap-3">
+               <div class="bg-white p-4 rounded-2xl shadow-xl border border-gray-50 flex flex-col items-center min-w-[80px]">
+                  <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ event()?.eventDate | date:'MMM' }}</span>
+                  <span class="text-2xl font-black text-gray-900 leading-none mt-1">{{ event()?.eventDate | date:'dd' }}</span>
+               </div>
+            </div>
+            <h1 class="text-4xl font-black text-gray-950 mb-4 tracking-tight leading-tight">{{ event()?.title }}</h1>
+            <p class="text-lg text-gray-500 max-w-3xl leading-relaxed">{{ event()?.description }}</p>
+          </div>
+        </div>
 
-      <div class="max-w-7xl mx-auto px-6 pt-12">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
           
-          <!-- Left Column: Primary Content -->
-          <div class="lg:col-span-8 space-y-12">
+          <!-- Main Details -->
+          <div class="lg:col-span-2 space-y-10">
             
-            <!-- Hero Title & Image -->
-            <div class="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm">
-              <div class="h-[450px] w-full bg-slate-100 relative group">
-                <img *ngIf="event()?.bannerUrl" [src]="event()?.bannerUrl" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Banner"/>
-                <div *ngIf="!event()?.bannerUrl" class="w-full h-full bg-gradient-to-br from-slate-200 to-slate-100 flex items-center justify-center text-6xl opacity-30">🔬</div>
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <!-- Agenda -->
+            <div *ngIf="event()?.agenda" class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-10 relative overflow-hidden">
+              <div class="absolute top-0 right-0 p-8 opacity-[0.03]">
+                 <svg class="w-40 h-40" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
               </div>
-              <div class="p-12 lg:p-16">
-                <h1 class="text-4xl lg:text-6xl font-black text-slate-900 leading-[1.1] mb-10 tracking-tightest">
-                  {{ event()?.title }}
-                </h1>
-                
-                <div class="flex flex-wrap items-center gap-10 pt-10 border-t border-slate-100">
-                   <div class="flex items-center gap-5">
-                      <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl shadow-inner">👨‍⚕️</div>
-                      <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Conférencier Principal</p>
-                        <p class="font-extrabold text-slate-900 text-lg leading-none">Dr. {{ event()?.speakerName || event()?.organizerName }}</p>
-                      </div>
-                   </div>
-                   <div class="flex items-center gap-5">
-                      <div class="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-2xl shadow-inner">📆</div>
-                      <div>
-                        <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1.5">Date de Session</p>
-                        <p class="font-extrabold text-slate-900 text-lg leading-none">{{ event()?.eventDate | date:'EEEE dd MMMM yyyy' }}</p>
-                      </div>
-                   </div>
-                </div>
+              <h2 class="text-2xl font-black text-gray-900 mb-8 flex items-center gap-3">
+                <span class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                </span>
+                Programme Détaillé
+              </h2>
+              <div class="prose prose-teal max-w-none text-gray-600 whitespace-pre-line text-base leading-loose">
+                {{ event()?.agenda }}
               </div>
             </div>
 
-            <!-- Description & Sections -->
-            <div class="bg-white rounded-[2.5rem] border border-slate-200 p-12 lg:p-16 shadow-sm space-y-16">
-               <section>
-                 <span class="inline-block px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-black uppercase tracking-widest mb-6">Présentation du sujet</span>
-                 <p class="text-slate-600 text-xl lg:text-2xl leading-[1.6] font-normal">
-                   {{ event()?.description }}
-                 </p>
-               </section>
-
-               <section *ngIf="event()?.speakerBio">
-                 <span class="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase tracking-widest mb-6">Expertise Intervenant</span>
-                 <p class="text-slate-500 italic text-xl leading-relaxed font-serif">
-                   "{{ event()?.speakerBio }}"
-                 </p>
-               </section>
-
-               <section *ngIf="event()?.agenda">
-                 <span class="inline-block px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest mb-6">Agenda Détaillé</span>
-                 <div class="bg-slate-50 p-10 rounded-3xl border border-slate-100 whitespace-pre-line text-slate-700 font-medium text-lg leading-relaxed shadow-inner">
-                   {{ event()?.agenda }}
-                 </div>
-               </section>
+            <!-- Leaflet Map -->
+            <div *ngIf="!isOnline(event())" class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden relative group">
+               <div class="p-10 pb-6">
+                 <h2 class="text-2xl font-black text-gray-900 flex items-center gap-3">
+                   <span class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                   </span>
+                   Lieu de l'événement
+                 </h2>
+                 <a [href]="'https://www.google.com/maps/dir/?api=1&destination=' + encode(event()?.location!)" target="_blank" 
+                    class="group/loc inline-flex items-center gap-2 mt-2 text-gray-500 hover:text-indigo-600 transition-colors">
+                    <p class="font-medium underline decoration-gray-200 underline-offset-4 group-hover/loc:decoration-indigo-300 transition-all">{{ event()?.location }}</p>
+                    <svg class="w-4 h-4 opacity-0 group-hover/loc:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                 </a>
+               </div>
+               
+               <div id="map" class="h-[550px] w-full z-10"></div>
             </div>
-
-            <!-- Location Section (PRO Clarity) -->
-            <section *ngIf="!isOnline(event())" class="space-y-6 animate-fade-in">
-                <!-- Massive Address Widget -->
-                <div class="bg-slate-900 text-white p-12 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                   <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-                   <div class="relative z-10">
-                      <p class="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
-                         <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-                         Lieu de rendez-vous
-                      </p>
-                      <h3 class="text-3xl lg:text-5xl font-black mb-10 leading-tight tracking-tightest">
-                         {{ event()?.location }}
-                      </h3>
-                      <div class="flex items-center gap-6">
-                        <a [href]="'https://www.google.com/maps/dir/?api=1&destination=' + encode(event()?.location!)" target="_blank" 
-                           class="px-8 py-5 bg-white text-slate-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/90 transition-all shadow-xl flex items-center gap-3">
-                           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                           Itinéraire Google Maps
-                        </a>
-                      </div>
-                   </div>
-                </div>
-
-                <!-- High Quality Color Map -->
-                <div class="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm h-[400px]">
-                   <iframe class="w-full h-full" frameborder="0" [src]="getMapUrl(event()?.location!)" allowfullscreen></iframe>
-                </div>
-            </section>
           </div>
 
-           <!-- Right Column: Actions Sidebar -->
-           <div class="lg:col-span-4 h-fit lg:sticky lg:top-32">
-             <!-- Action Card: Only if an action button is visible -->
-             <div *ngIf="(canEnterRoom() && isOnline(event())) || (!isOrganizer(event()) && !participationStatus() && !canEnterRoom())"
-                  class="bg-white rounded-[2.5rem] border border-slate-200 p-10 shadow-sm mb-10">
-               
-               <div class="space-y-4">
-                 <!-- Access live (Digital) -->
-                 <a *ngIf="canEnterRoom() && isOnline(event())"
-                    [routerLink]="['/events', event()?.id, 'room']"
-                    class="flex items-center justify-center gap-3 w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-lg">
-                   <span class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
-                   {{ isOrganizer(event()) ? 'AccÃ©der au Studio' : 'Rejoindre la session' }}
-                 </a>
+          <!-- Sidebar -->
+          <div class="lg:col-span-1">
+            <div class="bg-white rounded-[2.5rem] shadow-xl shadow-gray-200/30 border border-gray-100 p-8 sticky top-24">
+              
+              <div class="space-y-8">
+                <div>
+                   <label class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-4">Chronologie</label>
+                   <div class="flex items-start gap-4">
+                      <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400">
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div>
+                         <p class="text-sm font-bold text-gray-900">{{ event()?.eventDate | date:'EEEE dd MMMM' }}</p>
+                         <p class="text-xs text-gray-500 mt-0.5">Ouverture à {{ event()?.eventDate | date:'HH:mm' }}</p>
+                      </div>
+                   </div>
+                </div>
 
-                 <!-- Simple Registration Button -->
-                 <button *ngIf="!isOrganizer(event()) && !participationStatus() && !canEnterRoom()"
-                         (click)="join()"
-                         [disabled]="actionLoading()"
-                         class="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg disabled:opacity-50">
-                   {{ actionLoading() ? "Inscription..." : "S'inscrire à l'événement" }}
-                 </button>
-               </div>
-             </div>
-            
+                <div>
+                   <label class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-4">Intervenant Principal</label>
+                   <div class="flex items-start gap-4">
+                      <div class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 font-bold text-sm">
+                         {{ (event()?.speakerName || event()?.organizerName || 'D').charAt(0) }}
+                      </div>
+                      <div>
+                         <p class="text-sm font-bold text-gray-900">Dr. {{ event()?.speakerName || event()?.organizerName }}</p>
+                         <p class="text-xs text-gray-500 mt-0.5 italic">Expertise {{ formatLabel(event()?.specialization || 'Médicale') }}</p>
+                      </div>
+                   </div>
+                </div>
+
+                <div *ngIf="event()?.speakerBio" class="p-5 bg-stone-50 rounded-2xl border border-stone-100">
+                   <p class="text-xs text-gray-500 leading-relaxed italic">"{{ event()?.speakerBio }}"</p>
+                </div>
+              </div>
+
+              <div class="mt-10 pt-10 border-t border-gray-100">
+                 <!-- Action Buttons -->
+                 <div *ngIf="!isOrganizer(event())" class="space-y-4">
+                   
+                   <!-- Physical Event Registration -->
+                   <ng-container *ngIf="!isOnline(event())">
+                      <button *ngIf="!participationStatus()" (click)="join()" [disabled]="actionLoading()" 
+                              class="w-full py-4 px-6 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-teal-900/20 transition-all active:scale-[0.98] uppercase tracking-widest">
+                        {{ actionLoading() ? "TRAITEMENT..." : "RÉSERVER MA PLACE" }}
+                      </button>
+
+                      <div *ngIf="participationStatus()" class="space-y-3">
+                         <div class="w-full py-4 px-6 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-2xl border border-emerald-100 flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                            INSCRIPTION CONFIRMÉE
+                         </div>
+                         <button (click)="cancel()" [disabled]="actionLoading()"
+                                 class="w-full py-3 text-[10px] font-bold text-gray-400 hover:text-rose-500 uppercase tracking-widest transition-colors">
+                           Se désister
+                         </button>
+                      </div>
+                   </ng-container>
+
+                   <!-- Online Event Status (When not yet time to join) -->
+                   <div *ngIf="isOnline(event()) && !canEnterRoom()" class="w-full py-4 px-6 bg-blue-50 text-blue-700 text-[10px] font-black rounded-2xl border border-blue-100 flex items-center justify-center gap-2 uppercase tracking-widest">
+                      <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                      Accès Virtuel Libre
+                   </div>
+                 </div>
+
+                 <!-- Live Access -->
+                 <div *ngIf="isOrganizer(event()) || (canEnterRoom() && isOnline(event()))">
+                    <a *ngIf="isOnline(event())" [routerLink]="['/events', event()?.id, 'room']"
+                       class="w-full flex justify-center items-center py-4 px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-indigo-900/20 transition-all uppercase tracking-widest">
+                       ENTRER DANS LA SALLE
+                    </a>
+                    <p *ngIf="isOrganizer(event()) && !isOnline(event())" class="text-center text-[10px] font-bold text-teal-600 uppercase tracking-widest">
+                       Organisateur de la Session
+                    </p>
+                 </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 404 NOT FOUND STATE -->
-    <div *ngIf="notFound()" class="min-h-screen bg-white flex items-center justify-center p-6 animate-fade-in">
-       <div class="max-w-md w-full text-center space-y-10">
-          <div class="relative inline-block">
-             <div class="text-[12rem] font-black text-slate-50 leading-none tracking-tightest select-none">404</div>
-             <div class="absolute inset-0 flex items-center justify-center">
-                <span class="text-7xl">ðŸ¥</span>
-             </div>
-          </div>
-          <div class="space-y-4">
-             <h2 class="text-3xl font-black text-slate-900 tracking-tight">Session Introuvable</h2>
-             <p class="text-slate-500 font-medium leading-relaxed">
-               L'Ã©vÃ©nement que vous recherchez (ID: {{ requestedId }}) n'existe plus ou a Ã©tÃ© retirÃ© de la plateforme.
-             </p>
-          </div>
-          <div class="pt-6">
-             <a routerLink="/events" class="inline-flex items-center gap-4 px-10 py-6 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-2xl">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                Catalogue de Conférences
-             </a>
-          </div>
-       </div>
+    <div *ngIf="notFound()" class="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div class="max-w-md w-full text-center space-y-8 bg-white p-10 rounded-3xl shadow-sm border border-gray-200">
+        <div class="text-6xl mb-4">🏥</div>
+        <h2 class="text-2xl font-bold text-gray-900">Événement Introuvable</h2>
+        <p class="text-gray-500">L'événement que vous recherchez n'existe plus ou a été retiré.</p>
+        <a routerLink="/events" class="inline-flex items-center justify-center w-full py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors cursor-pointer">
+          Retour au catalogue
+        </a>
+      </div>
     </div>
   `,
   styles: [`
-    .tracking-tightest { letter-spacing: -0.06em; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    #map { z-index: 10 !important; border-radius: 0 0 2.5rem 2.5rem; }
+    .leaflet-container { border-bottom: 1px solid #f3f4f6; }
+    .leaflet-routing-container { display: none !important; }
   `]
 })
 export class EventDetailComponent implements OnInit {
@@ -195,17 +218,15 @@ export class EventDetailComponent implements OnInit {
   participationStatus = signal<ParticipantStatus | undefined>(undefined);
   waitlistRank        = signal<number | undefined>(undefined);
   participants        = signal<Participant[]>([]);
-  showManageModal     = signal(false);
+  
+  private map: any;
 
   ngOnInit() {
     this.route.params.subscribe(params => {
       const id = +params['id'];
       this.requestedId = params['id'];
-      if (id) {
-        this.loadEvent(id);
-      } else {
-        this.notFound.set(true);
-      }
+      if (id) this.loadEvent(id);
+      else this.notFound.set(true);
     });
   }
 
@@ -215,12 +236,86 @@ export class EventDetailComponent implements OnInit {
         this.notFound.set(false);
         this.event.set(ev);
         this.checkParticipation();
-        if (this.isOrganizer(ev)) { this.loadParticipants(ev.id!); }
+        if (!this.isOnline(ev)) {
+          setTimeout(() => this.initMap(), 500);
+        }
       },
-      error: () => {
-        this.notFound.set(true);
-      }
+      error: () => this.notFound.set(true)
     });
+  }
+
+  private initMap() {
+    const loc = this.event()?.location;
+    if (!loc || (window as any).L === undefined) return;
+
+    const L = (window as any).L;
+    
+    // Ensure Routing plugin is loaded
+    if (!L.Routing) {
+      setTimeout(() => this.initMap(), 200);
+      return;
+    }
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.length === 0) return;
+        const destCoords = L.latLng(data[0].lat, data[0].lon);
+        
+        if (this.map) this.map.remove();
+        this.map = L.map('map', { scrollWheelZoom: false }).setView(destCoords, 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(this.map);
+
+        const startRouting = (start: any) => {
+          L.Routing.control({
+            waypoints: [start, destCoords],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: true,
+            show: false,
+            collapsible: true,
+            lineOptions: {
+              styles: [{ color: '#0d9488', opacity: 0.8, weight: 6 }]
+            },
+            createMarker: (i: number, wp: any) => {
+              return L.marker(wp.latLng, {
+                icon: L.icon({
+                  iconUrl: i === 0 ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png' : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                  iconSize: [25, 41],
+                  iconAnchor: [12, 41]
+                })
+              }).bindPopup(i === 0 ? "Départ" : `<b>${this.event()?.title}</b><br>${loc}`);
+            }
+          }).addTo(this.map);
+        };
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => startRouting(L.latLng(pos.coords.latitude, pos.coords.longitude)),
+            () => startRouting(L.latLng(36.8065, 10.1815)) // Fallback to Tunis
+          );
+        } else {
+          startRouting(L.latLng(36.8065, 10.1815));
+        }
+      })
+      .catch(err => console.error('Map init failed:', err));
+  }
+
+  private showOnlyMarker(coords: any, loc: string) {
+    const L = (window as any).L;
+    L.marker(coords, {
+      icon: L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41]
+      })
+    }).addTo(this.map).bindPopup(`<b>${this.event()?.title}</b><br>${loc}`).openPopup();
   }
 
   loadParticipants(id: number) {

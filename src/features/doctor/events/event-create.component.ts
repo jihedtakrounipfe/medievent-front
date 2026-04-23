@@ -1,12 +1,22 @@
 import { Component, inject, signal, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { EventService } from '../../../core/services/event.service';
 import { UploadService } from '../../../core/services/upload.service';
 import { Router } from '@angular/router';
 import { Specialization } from '../../../core/user/enums/specialization.enum';
 import { AuthFacade } from '../../../core/services/auth.facade';
 
+export function futureDateValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (!control.value) {
+      return null;
+    }
+    const selectedDate = new Date(control.value).getTime();
+    const now = new Date().getTime();
+    return selectedDate <= now ? { pastDate: true } : null;
+  };
+}
 @Component({
   selector: 'app-event-create',
   standalone: true,
@@ -14,22 +24,22 @@ import { AuthFacade } from '../../../core/services/auth.facade';
   template: `
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-    <div class="min-h-screen bg-slate-50 font-sans text-slate-900 pb-32 animate-fade-in relative overflow-hidden">
+    <div class="min-h-screen bg-gray-50 font-sans text-gray-900 pb-32 animate-fade-in relative overflow-hidden">
       
       <!-- Studio Header -->
-      <div class="bg-white border-b border-slate-200 py-10 sticky top-0 z-40 bg-white/80 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="bg-white border-b border-gray-200 py-6 sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-black text-slate-900 tracking-tightest">Studio de Création</h1>
-            <p class="text-slate-500 font-medium text-sm mt-1">Configurez votre événement professionnel</p>
+            <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">Studio de Création</h1>
+            <p class="text-gray-500 font-medium text-sm mt-1">Configurez votre événement professionnel</p>
           </div>
           <div class="flex items-center gap-4">
-             <div class="px-4 py-2 bg-slate-100 rounded-xl flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full" [ngClass]="getScore() === 100 ? 'bg-emerald-500' : 'bg-amber-400'"></span>
-                <span class="text-xs font-bold text-slate-600">Complétude: {{ getScore() }}%</span>
+             <div class="px-4 py-2 bg-gray-50 rounded-lg flex items-center gap-2 border border-gray-200">
+                <span class="w-2.5 h-2.5 rounded-full" [ngClass]="getScore() === 100 ? 'bg-teal-500' : 'bg-amber-400 animate-pulse'"></span>
+                <span class="text-xs font-bold text-gray-600">Complétude: {{ getScore() }}%</span>
              </div>
              <button (click)="onSubmit()" [disabled]="eventForm.invalid || loading()"
-                     class="px-8 py-3 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center gap-2">
+                     class="px-6 py-2.5 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                 <span *ngIf="loading()" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                 Publier la Session
              </button>
@@ -37,126 +47,157 @@ import { AuthFacade } from '../../../core/services/auth.facade';
         </div>
       </div>
 
-      <div class="max-w-7xl mx-auto px-6 lg:px-12 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         <!-- Left Column: Studio Form (70%) -->
-        <div class="lg:col-span-7 space-y-10">
-          <form [formGroup]="eventForm" class="space-y-10">
+        <div class="lg:col-span-8 space-y-8">
+          <form [formGroup]="eventForm" class="space-y-8">
             
             <!-- Informations Essentielles -->
-            <div class="bg-white p-8 lg:p-10 rounded-[2rem] border border-slate-200 shadow-sm relative">
-              <div class="absolute top-0 left-0 w-2 h-full bg-blue-500 rounded-l-[2rem]"></div>
-              <h3 class="text-lg font-black text-slate-900 mb-8 uppercase tracking-widest flex items-center gap-3">
-                 <span class="text-blue-500 text-2xl">01</span> Informations Essentielles
+            <div class="bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-sm">
+              <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-3">
+                 <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-50 text-teal-600 text-sm">1</span> 
+                 Informations Essentielles
               </h3>
               
-              <div class="space-y-8">
+              <div class="space-y-6">
                 <div>
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Titre de l'événement</label>
-                  <input type="text" formControlName="title" placeholder="Titre accrocheur..."
-                         class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none" />
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Titre de l'événement <span class="text-red-500">*</span></label>
+                  <input type="text" formControlName="title" placeholder="Ex: Congrès Annuel de Cardiologie"
+                         [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('title'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('title')}"
+                         class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none" />
+                  <p *ngIf="isFieldInvalid('title')" class="mt-1 text-xs text-red-500">Le titre est requis (min 5 caractères).</p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Spécialité</label>
-                    <select formControlName="specialization" class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Spécialité <span class="text-red-500">*</span></label>
+                    <select formControlName="specialization" 
+                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('specialization'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('specialization')}"
+                            class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none appearance-none">
                       <option value="" disabled>Choisir la spécialité</option>
                       <option *ngFor="let s of specializations" [value]="s">{{ formatLabel(s) }}</option>
                     </select>
+                    <p *ngIf="isFieldInvalid('specialization')" class="mt-1 text-xs text-red-500">Veuillez sélectionner une spécialité.</p>
                   </div>
                   <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Image (URL ou Fichier)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Image de couverture</label>
                     <div class="flex items-center gap-2">
-                       <input type="text" formControlName="bannerUrl" placeholder="https://" class="flex-1 px-4 py-4 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-100 outline-none" />
+                       <input type="text" formControlName="bannerUrl" placeholder="https://" 
+                              [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('bannerUrl'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('bannerUrl')}"
+                              class="flex-1 px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none" />
                        <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" class="hidden" />
-                       <button type="button" (click)="fileInput.click()" [disabled]="uploading()" class="w-14 h-12 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl flex items-center justify-center transition-colors">
-                          <span *ngIf="uploading()" class="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></span>
-                          <svg *ngIf="!uploading()" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                       <button type="button" (click)="fileInput.click()" [disabled]="uploading()" class="w-12 h-12 bg-gray-50 border border-gray-300 hover:bg-gray-100 text-gray-600 rounded-xl flex items-center justify-center transition-colors">
+                          <span *ngIf="uploading()" class="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>
+                          <svg *ngIf="!uploading()" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                        </button>
                     </div>
+                    <p *ngIf="isFieldInvalid('bannerUrl')" class="mt-1 text-xs text-red-500">Format d'URL invalide.</p>
                   </div>
                 </div>
 
                 <div>
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Résumé / Description</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Résumé / Description <span class="text-red-500">*</span></label>
                   <textarea formControlName="description" placeholder="Présentez le sujet et les objectifs..."
-                            class="w-full h-32 px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-100 outline-none resize-none"></textarea>
+                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('description'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('description')}"
+                            class="w-full h-32 px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none resize-y"></textarea>
+                  <p *ngIf="isFieldInvalid('description')" class="mt-1 text-xs text-red-500">La description est requise.</p>
                 </div>
               </div>
             </div>
 
             <!-- Configuration Modale -->
-            <div class="bg-white p-8 lg:p-10 rounded-[2rem] border border-slate-200 shadow-sm relative">
-              <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500 rounded-l-[2rem]"></div>
-              <h3 class="text-lg font-black text-slate-900 mb-8 uppercase tracking-widest flex items-center gap-3">
-                 <span class="text-indigo-500 text-2xl">02</span> Déroulement & Accès
+            <div class="bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-sm">
+              <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-3">
+                 <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 text-sm">2</span> 
+                 Déroulement & Accès
               </h3>
               
-              <div class="space-y-8">
+              <div class="space-y-6">
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Date & Heure</label>
-                      <input type="datetime-local" formControlName="eventDate" class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100" />
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Date & Heure <span class="text-red-500">*</span></label>
+                      <input type="datetime-local" formControlName="eventDate" 
+                             [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('eventDate'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('eventDate')}"
+                             class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none" />
+                      <div *ngIf="isFieldInvalid('eventDate')" class="mt-1 text-xs text-red-500">
+                         <p *ngIf="eventForm.get('eventDate')?.hasError('required')">La date est requise.</p>
+                         <p *ngIf="eventForm.get('eventDate')?.hasError('pastDate')">La date doit être ultérieure à aujourd'hui.</p>
+                      </div>
                     </div>
                     <div>
-                      <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Capacité Max</label>
-                      <input type="number" formControlName="maxParticipants" class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100" />
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Capacité Max</label>
+                      <input type="number" formControlName="maxParticipants" 
+                             [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('maxParticipants'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('maxParticipants')}"
+                             class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none" />
+                      <p *ngIf="isFieldInvalid('maxParticipants')" class="mt-1 text-xs text-red-500">La capacité doit être au moins 1.</p>
                     </div>
                  </div>
 
                  <!-- Localisation -->
                  <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Format Spatial</label>
-                    <div class="flex bg-slate-50 p-1.5 rounded-2xl mb-4">
-                       <button type="button" (click)="setLocationType('online')" [class]="locationType() === 'online' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:bg-slate-100'" class="flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all">Digital 🌐</button>
-                       <button type="button" (click)="setLocationType('physical')" [class]="locationType() === 'physical' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:bg-slate-100'" class="flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all">Présentiel 📍</button>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Format Spatial <span class="text-red-500">*</span></label>
+                    <div class="flex bg-gray-100 p-1 rounded-xl mb-4">
+                       <button type="button" (click)="setLocationType('online')" [class]="locationType() === 'online' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2 rounded-lg text-sm font-medium transition-all">Digital (Visio)</button>
+                       <button type="button" (click)="setLocationType('physical')" [class]="locationType() === 'physical' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2 rounded-lg text-sm font-medium transition-all">Présentiel</button>
                     </div>
 
-                    <div *ngIf="locationType() === 'physical'" class="animate-fade-in border border-slate-100 rounded-3xl overflow-hidden relative">
-                       <div *ngIf="selectedAddress()" class="absolute top-4 left-4 right-4 bg-white/90 backdrop-blur pb-1 px-4 py-3 border border-slate-200 rounded-xl z-[1000] shadow-sm flex items-center gap-2">
-                          <span>📍</span> <span class="text-xs font-bold text-slate-800 line-clamp-1">{{ selectedAddress() }}</span>
+                    <div *ngIf="locationType() === 'physical'" class="animate-fade-in">
+                       <p class="text-xs text-gray-500 mb-2">Cliquez sur la carte pour définir l'adresse exacte.</p>
+                       <div class="border border-gray-300 rounded-xl overflow-hidden relative shadow-inner">
+                         <div *ngIf="selectedAddress()" class="absolute top-4 left-4 right-4 bg-white/95 backdrop-blur px-4 py-2 border border-gray-200 rounded-lg z-[1000] shadow-sm flex items-center gap-2">
+                            <span>📍</span> <span class="text-xs font-medium text-gray-800 truncate">{{ selectedAddress() }}</span>
+                         </div>
+                         <div id="event-map" class="h-64 w-full bg-gray-200"></div>
                        </div>
-                       <div id="event-map" class="h-64 w-full bg-slate-100"></div>
+                       <p *ngIf="isFieldInvalid('location')" class="mt-1 text-xs text-red-500">Veuillez sélectionner une adresse sur la carte.</p>
                     </div>
                  </div>
 
                  <!-- Audience -->
-                 <div class="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                 <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div>
-                      <p class="text-xs font-black text-slate-900 uppercase tracking-widest">Audience Publique</p>
-                      <p class="text-[10px] text-slate-500 mt-1">Visible par les patients et les médecins</p>
+                      <p class="text-sm font-bold text-gray-900">Audience Publique</p>
+                      <p class="text-xs text-gray-500 mt-0.5">Rendre visible par les patients et les médecins</p>
                     </div>
-                    <button type="button" (click)="toggleAudience()" [class.bg-indigo-500]="eventForm.value.targetAudience === 'PUBLIC'" class="w-14 h-7 bg-slate-200 rounded-full relative transition-colors duration-300">
-                       <div [class.translate-x-7]="eventForm.value.targetAudience === 'PUBLIC'" class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300"></div>
+                    <button type="button" (click)="toggleAudience()" [class.bg-teal-500]="eventForm.value.targetAudience === 'PUBLIC'" [class.bg-gray-300]="eventForm.value.targetAudience !== 'PUBLIC'" class="w-12 h-6 rounded-full relative transition-colors duration-300">
+                       <div [class.translate-x-6]="eventForm.value.targetAudience === 'PUBLIC'" class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300"></div>
                     </button>
                  </div>
               </div>
             </div>
 
             <!-- Intervenant & Programme -->
-            <div class="bg-white p-8 lg:p-10 rounded-[2rem] border border-slate-200 shadow-sm relative">
-              <div class="absolute top-0 left-0 w-2 h-full bg-emerald-500 rounded-l-[2rem]"></div>
-              <h3 class="text-lg font-black text-slate-900 mb-8 uppercase tracking-widest flex items-center gap-3">
-                 <span class="text-emerald-500 text-2xl">03</span> Intervenant & Programme
+            <div class="bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-sm">
+              <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-3">
+                 <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 text-sm">3</span> 
+                 Intervenant & Programme
               </h3>
               
               <div class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                    <div class="md:col-span-4">
-                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Intervenant</label>
-                     <input type="text" formControlName="speakerName" placeholder="Pr. Nom" class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-100" />
+                     <label class="block text-sm font-medium text-gray-700 mb-1">Intervenant <span class="text-red-500">*</span></label>
+                     <input type="text" formControlName="speakerName" placeholder="Dr. Dupont" 
+                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('speakerName'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('speakerName')}"
+                            class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none" />
+                     <p *ngIf="isFieldInvalid('speakerName')" class="mt-1 text-xs text-red-500">Requis.</p>
                    </div>
                    <div class="md:col-span-8">
-                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Biographie</label>
-                     <input type="text" formControlName="speakerBio" placeholder="Expertise, Titres..." class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-100" />
+                     <label class="block text-sm font-medium text-gray-700 mb-1">Biographie brève <span class="text-red-500">*</span></label>
+                     <input type="text" formControlName="speakerBio" placeholder="Expertise, Titres..." 
+                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('speakerBio'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('speakerBio')}"
+                            class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none" />
+                     <p *ngIf="isFieldInvalid('speakerBio')" class="mt-1 text-xs text-red-500">Requis.</p>
                    </div>
                 </div>
 
                 <div>
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Agenda Détaillé</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Agenda Détaillé <span class="text-red-500">*</span></label>
                   <textarea formControlName="agenda" placeholder="Chronologie de l'intervention..."
-                            class="w-full h-32 px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-100 outline-none resize-none"></textarea>
+                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('agenda'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('agenda')}"
+                            class="w-full h-32 px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none resize-y"></textarea>
+                  <p *ngIf="isFieldInvalid('agenda')" class="mt-1 text-xs text-red-500">L'agenda est requis.</p>
                 </div>
               </div>
             </div>
@@ -165,50 +206,49 @@ import { AuthFacade } from '../../../core/services/auth.facade';
         </div>
 
         <!-- Right Column: Live Preview & Checklist (30%) -->
-        <div class="lg:col-span-5 relative">
-          <div class="sticky top-32 space-y-8">
+        <div class="lg:col-span-4 relative">
+          <div class="sticky top-28 space-y-6">
             
             <!-- Live Preview Card -->
             <div>
-               <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Aperçu en direct</h4>
-               <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl shadow-slate-200/50 flex flex-col pointer-events-none transform scale-[0.95] origin-top">
-                  <div class="relative h-48 w-full bg-slate-100">
+               <h4 class="text-sm font-bold text-gray-900 mb-3 px-1">Aperçu</h4>
+               <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm flex flex-col pointer-events-none transition-all">
+                  <div class="relative h-40 w-full bg-gray-100">
                     <img *ngIf="eventForm.value.bannerUrl" [src]="eventForm.value.bannerUrl" class="w-full h-full object-cover" alt="Preview Thumbnail"/>
-                    <div *ngIf="!eventForm.value.bannerUrl" class="w-full h-full flex items-center justify-center text-5xl opacity-20 filter grayscale">📸</div>
+                    <div *ngIf="!eventForm.value.bannerUrl" class="w-full h-full flex items-center justify-center text-gray-300">
+                      <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
                     
-                    <div class="absolute top-4 left-4 flex flex-col gap-2 z-[50]">
-                       <span *ngIf="eventForm.value.specialization" class="w-fit px-3 py-1 bg-white/90 backdrop-blur-md rounded-lg text-[9px] font-bold text-slate-900 border border-slate-200 uppercase tracking-widest shadow-sm">
+                    <div class="absolute top-3 left-3 z-[50]">
+                       <span *ngIf="eventForm.value.specialization" class="px-2 py-1 bg-white/90 backdrop-blur text-xs font-bold text-teal-800 rounded-md border border-teal-100 shadow-sm">
                           {{ formatLabel(eventForm.value.specialization) }}
                        </span>
                     </div>
 
-                    <div class="absolute top-4 right-4 z-[50]">
-                       <span [class]="locationType() === 'online' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900 text-white border-slate-800'" 
-                             class="px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border shadow-xl flex items-center gap-1.5">
-                          <span class="w-1 h-1 rounded-full bg-white animate-pulse"></span>
+                    <div class="absolute top-3 right-3 z-[50]">
+                       <span [class]="locationType() === 'online' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'" 
+                             class="px-2 py-1 rounded-md text-[10px] font-bold border shadow-sm flex items-center gap-1.5">
+                          <span class="w-1.5 h-1.5 rounded-full" [ngClass]="locationType() === 'online' ? 'bg-blue-600 animate-pulse' : 'bg-gray-500'"></span>
                           {{ locationType() === 'online' ? 'En ligne' : 'Présentiel' }}
                        </span>
                     </div>
                   </div>
 
-                  <div class="p-6 flex-1 flex flex-col">
-                    <div class="flex items-center gap-2 mb-4 text-slate-400 text-[9px] font-bold uppercase tracking-widest leading-none">
-                      <span>{{ (eventForm.value.eventDate | date:'dd MMM') || 'Date' }}</span>
-                      <span class="w-1 h-1 rounded-full bg-slate-200"></span>
-                      <span>{{ (eventForm.value.eventDate | date:'HH:mm') || 'Heure' }}</span>
+                  <div class="p-5 flex-1 flex flex-col">
+                    <div class="flex items-center text-xs text-gray-500 font-medium mb-3">
+                       <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                       {{ (eventForm.value.eventDate | date:'dd MMM à HH:mm') || 'Date' }}
                     </div>
 
-                    <h3 class="text-lg font-bold text-slate-900 mb-6 leading-tight line-clamp-2 tracking-tightest">
+                    <h3 class="text-base font-bold text-gray-900 mb-4 line-clamp-2 leading-tight">
                       {{ eventForm.value.title || 'Titre de votre événement' }}
                     </h3>
 
-                    <div class="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
-                      <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-base grayscale shadow-inner">👨‍⚕️</div>
-                        <div class="flex flex-col">
-                          <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Conférencier</span>
-                          <span class="text-[10px] font-bold text-slate-700">Dr. {{ eventForm.value.speakerName || 'Nom' }}</span>
-                        </div>
+                    <div class="mt-auto pt-3 border-t border-gray-100 flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center text-sm font-bold border border-teal-100">Dr</div>
+                      <div class="flex flex-col">
+                        <span class="text-[10px] text-gray-500 font-medium leading-none mb-1">Conférencier</span>
+                        <span class="text-xs font-bold text-gray-900">Dr. {{ eventForm.value.speakerName || 'Nom' }}</span>
                       </div>
                     </div>
                   </div>
@@ -216,30 +256,30 @@ import { AuthFacade } from '../../../core/services/auth.facade';
             </div>
 
             <!-- Dynamic Checklist Assistant -->
-            <div class="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
-               <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Assistant de Qualité</h4>
-               <ul class="space-y-4">
-                  <li class="flex items-center gap-3 text-sm font-semibold transition-colors duration-300" [ngClass]="isFieldValid('title') ? 'text-emerald-600' : 'text-slate-400'">
-                     <div class="w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors duration-300" [ngClass]="isFieldValid('title') ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'">
-                        <svg *ngIf="isFieldValid('title')" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+               <h4 class="text-sm font-bold text-gray-900 mb-4">Assistant de Qualité</h4>
+               <ul class="space-y-3">
+                  <li class="flex items-center gap-3 text-sm transition-colors duration-300" [ngClass]="isFieldValid('title') ? 'text-teal-700 font-medium' : 'text-gray-500'">
+                     <div class="w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300" [ngClass]="isFieldValid('title') ? 'border-teal-500 bg-teal-50 text-teal-600' : 'border-gray-300'">
+                        <svg *ngIf="isFieldValid('title')" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                      </div>
                      Titre percutant (min 5 car.)
                   </li>
-                  <li class="flex items-center gap-3 text-sm font-semibold transition-colors duration-300" [ngClass]="isFieldValid('specialization') && isFieldValid('bannerUrl') ? 'text-emerald-600' : 'text-slate-400'">
-                     <div class="w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors duration-300" [ngClass]="isFieldValid('specialization') && isFieldValid('bannerUrl') ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'">
-                        <svg *ngIf="isFieldValid('specialization') && isFieldValid('bannerUrl')" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                  <li class="flex items-center gap-3 text-sm transition-colors duration-300" [ngClass]="isFieldValid('specialization') && isFieldValid('description') ? 'text-teal-700 font-medium' : 'text-gray-500'">
+                     <div class="w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300" [ngClass]="isFieldValid('specialization') && isFieldValid('description') ? 'border-teal-500 bg-teal-50 text-teal-600' : 'border-gray-300'">
+                        <svg *ngIf="isFieldValid('specialization') && isFieldValid('description')" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                      </div>
-                     Identité visuelle & Spécialité
+                     Spécialité & Description
                   </li>
-                  <li class="flex items-center gap-3 text-sm font-semibold transition-colors duration-300" [ngClass]="isFieldValid('eventDate') && isFieldValid('location') ? 'text-emerald-600' : 'text-slate-400'">
-                     <div class="w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors duration-300" [ngClass]="isFieldValid('eventDate') && isFieldValid('location') ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'">
-                        <svg *ngIf="isFieldValid('eventDate') && isFieldValid('location')" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                  <li class="flex items-center gap-3 text-sm transition-colors duration-300" [ngClass]="isFieldValid('eventDate') && isFieldValid('location') ? 'text-teal-700 font-medium' : 'text-gray-500'">
+                     <div class="w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300" [ngClass]="isFieldValid('eventDate') && isFieldValid('location') ? 'border-teal-500 bg-teal-50 text-teal-600' : 'border-gray-300'">
+                        <svg *ngIf="isFieldValid('eventDate') && isFieldValid('location')" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                      </div>
                      Logistique (Date & Lieu)
                   </li>
-                  <li class="flex items-center gap-3 text-sm font-semibold transition-colors duration-300" [ngClass]="isFieldValid('speakerName') && isFieldValid('agenda') ? 'text-emerald-600' : 'text-slate-400'">
-                     <div class="w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors duration-300" [ngClass]="isFieldValid('speakerName') && isFieldValid('agenda') ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'">
-                        <svg *ngIf="isFieldValid('speakerName') && isFieldValid('agenda')" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                  <li class="flex items-center gap-3 text-sm transition-colors duration-300" [ngClass]="isFieldValid('speakerName') && isFieldValid('agenda') ? 'text-teal-700 font-medium' : 'text-gray-500'">
+                     <div class="w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300" [ngClass]="isFieldValid('speakerName') && isFieldValid('agenda') ? 'border-teal-500 bg-teal-50 text-teal-600' : 'border-gray-300'">
+                        <svg *ngIf="isFieldValid('speakerName') && isFieldValid('agenda')" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                      </div>
                      Programme et Intervenant
                   </li>
@@ -252,9 +292,8 @@ import { AuthFacade } from '../../../core/services/auth.facade';
     </div>
   `,
   styles: [`
-    .tracking-tightest { letter-spacing: -0.06em; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
   `]
 })
 export class EventCreateComponent implements AfterViewInit, OnDestroy {
@@ -282,7 +321,7 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
   eventForm = this.fb.group({
     title:          ['', [Validators.required, Validators.minLength(5)]],
     description:    ['', [Validators.required]],
-    eventDate:      ['', [Validators.required]],
+    eventDate:      ['', [Validators.required, futureDateValidator()]],
     location:       ['SALLE_VIRTUELLE_INTERNE', [Validators.required]],
     targetAudience: ['DOCTORS_ONLY', [Validators.required]],
     maxParticipants:[50, [Validators.min(1)]],
@@ -297,6 +336,11 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
   isFieldValid(field: string): boolean {
     const ctrl = this.eventForm.get(field);
     return !!(ctrl && ctrl.valid && (ctrl.dirty || ctrl.touched || ctrl.value));
+  }
+
+  isFieldInvalid(field: string): boolean {
+    const ctrl = this.eventForm.get(field);
+    return !!(ctrl && ctrl.invalid && (ctrl.dirty || ctrl.touched));
   }
 
   getScore(): number {

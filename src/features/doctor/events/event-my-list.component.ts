@@ -9,151 +9,175 @@ import { Router, RouterModule } from '@angular/router';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   template: `
-    <div class="min-h-screen bg-slate-50 font-sans text-slate-900 pb-32">
-      
-      <!-- Dashboard Top Section -->
-      <div class="bg-white border-b border-slate-200 pt-20 pb-16">
-        <div class="max-w-7xl mx-auto px-6 lg:px-12">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-10">
-            <div class="animate-fade-in">
-              <span class="inline-block px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-widest mb-4">Gestionnaire de sessions</span>
-              <h1 class="text-4xl lg:text-7xl font-extrabold text-slate-900 tracking-tightest leading-[1.1]">
-                Vos <span class="text-blue-600">Conférences</span>.
-              </h1>
-            </div>
-
-            <a routerLink="/doctor/events/create" 
-               class="btn-pro btn-primary-pro py-5 px-10 animate-fade-in">
-               <span class="text-xl leading-none font-light mr-2">+</span>
-               Créer un événement
-            </a>
-          </div>
+<div class="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900">
+  
+  <!-- Dashboard Header -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between py-8 gap-4">
+        <div>
+          <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Vos Événements</h1>
+          <p class="mt-2 text-sm text-gray-500">Gérez vos conférences, webinaires et ateliers.</p>
         </div>
-      </div>
-
-      <!-- Dashboard Body -->
-      <div class="max-w-7xl mx-auto px-6 lg:px-12 -mt-10 relative z-20">
-        
-        <!-- Key Stats -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-           <div class="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
-              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Total Événements</p>
-              <p class="text-4xl font-extrabold text-slate-900">{{ events().length }}</p>
-           </div>
-           <div class="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
-              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Inscriptions totales</p>
-              <p class="text-4xl font-extrabold text-blue-600">{{ totalParticipants() }}</p>
-           </div>
-           <div class="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
-              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Sessions futures</p>
-              <p class="text-4xl font-extrabold text-slate-900">{{ upcomingCount() }}</p>
-           </div>
-        </div>
-
-        <!-- Management Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div *ngFor="let ev of events(); let i = index" 
-               class="group bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:border-slate-300 hover:shadow-md transition-all duration-300 flex flex-col h-full animate-fade-in"
-               [style.animation-delay]="(i * 0.05) + 's'">
-            
-            <!-- Card Image Area -->
-            <div class="relative h-48 w-full overflow-hidden bg-slate-50">
-              <img *ngIf="ev.bannerUrl" [src]="ev.bannerUrl" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="Banner"/>
-              <div *ngIf="!ev.bannerUrl" class="w-full h-full bg-slate-100 flex items-center justify-center text-4xl grayscale opacity-20">🔬</div>
-              
-              <!-- Badge: Presence (Top Right for visibility) - Fixed Position -->
-              <div class="absolute top-4 right-4 z-[50]">
-                 <span [class]="isOnline(ev) ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20' : 'bg-slate-900 text-white border-slate-800 shadow-slate-900/20'" 
-                       class="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-xl flex items-center gap-1.5 transition-all">
-                    <span class="w-1 h-1 rounded-full bg-white animate-pulse"></span>
-                    {{ isOnline(ev) ? 'En ligne' : 'Présentiel' }}
-                 </span>
-              </div>
-              
-              <!-- Floating Delete Action -->
-              <div class="absolute bottom-4 right-4 z-[50]">
-                 <button (click)="$event.stopPropagation(); delete(ev.id!)" 
-                         class="w-10 h-10 rounded-xl bg-white/90 backdrop-blur-md text-rose-600 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-all shadow-lg border border-slate-100">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                 </button>
-              </div>
-            </div>
-
-            <!-- Card Content Body -->
-            <div class="p-8 flex-1 flex flex-col" [routerLink]="['/events', ev.id]">
-              <div class="flex items-center gap-3 mb-4">
-                 <p class="text-slate-300 text-[10px] font-bold uppercase tracking-widest leading-none">{{ ev.eventDate | date:'dd MMM yyyy' }}</p>
-                 <div class="h-1 w-1 bg-slate-200 rounded-full"></div>
-                 <p class="text-blue-600 text-[10px] font-bold uppercase tracking-widest leading-none">{{ ev.eventDate | date:'HH:mm' }}H</p>
-              </div>
-
-              <h3 class="text-xl font-bold text-slate-900 mb-8 line-clamp-2 leading-tight tracking-tightest group-hover:text-blue-600 transition-colors cursor-pointer">
-                {{ ev.title }}
-              </h3>
-
-              <div class="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                  <div class="px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-2">
-                     <span class="text-xs font-bold text-slate-900">{{ ev.confirmedCount || 0 }}</span>
-                     <span class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Inscrits</span>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <button *ngIf="isOnline(ev)" (click)="$event.stopPropagation(); openInviteModal(ev)" class="text-slate-400 text-[8px] font-black uppercase tracking-widest hover:text-blue-600 transition-colors">Inviter +</button>
-                    <button *ngIf="canJoinRoom(ev)" [routerLink]="['/events', ev.id, 'room']" (click)="$event.stopPropagation()" 
-                            class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-red-700 transition-all flex items-center gap-2 shadow-lg shadow-red-600/20">
-                       <span class="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] animate-pulse"></span>
-                       REJOINDRE
-                    </button>
-                  </div>
-                </div>
-                <div class="text-slate-200 group-hover:text-slate-900 transition-colors">
-                  <svg class="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div *ngIf="events().length === 0" class="py-40 text-center bg-white rounded-3xl border border-slate-100 shadow-sm animate-fade-in">
-           <div class="text-5xl mb-6 opacity-10">📁</div>
-           <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Aucune session programmée</p>
-           <a routerLink="/doctor/events/create" class="mt-6 inline-block text-blue-600 font-bold text-xs hover:underline decoration-2 underline-offset-4">Planifier une nouvelle conférence</a>
-        </div>
+        <a routerLink="/doctor/events/create" 
+           class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors">
+           <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+           Nouvel événement
+        </a>
       </div>
     </div>
+  </div>
 
-    <!-- Invite Modal -->
-    <div *ngIf="inviteModalEvent()" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-      <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden relative">
-        <div class="p-10 border-b border-slate-100">
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Invitation Directe</p>
-          <h3 class="text-2xl font-extrabold text-slate-900 leading-tight">{{ inviteModalEvent()?.title }}</h3>
-        </div>
-        <div class="p-10 space-y-6">
-          <div class="space-y-2">
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email du destinataire</label>
-            <input [(ngModel)]="inviteGuestEmail" type="email" placeholder="nom@exemple.com" 
-                   class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-xl text-slate-900 font-medium outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all" />
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+    
+    <!-- Key Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+       <div class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm flex items-center">
+          <div class="p-3 rounded-xl bg-teal-50 text-teal-600 mr-4">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">Total Événements</p>
+            <p class="text-2xl font-bold text-gray-900">{{ events().length }}</p>
+          </div>
+       </div>
+       <div class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm flex items-center">
+          <div class="p-3 rounded-xl bg-blue-50 text-blue-600 mr-4">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">Inscriptions</p>
+            <p class="text-2xl font-bold text-gray-900">{{ totalParticipants() }}</p>
+          </div>
+       </div>
+       <div class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm flex items-center">
+          <div class="p-3 rounded-xl bg-indigo-50 text-indigo-600 mr-4">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">À venir</p>
+            <p class="text-2xl font-bold text-gray-900">{{ upcomingCount() }}</p>
+          </div>
+       </div>
+    </div>
+
+    <!-- Management Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div *ngFor="let ev of events()" class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full cursor-pointer relative group" [routerLink]="['/events', ev.id]">
+        
+        <!-- Delete Button Overlay -->
+        <button (click)="$event.stopPropagation(); delete(ev.id!)" 
+                class="absolute top-4 right-4 z-10 w-8 h-8 bg-white/90 backdrop-blur text-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-gray-100"
+                title="Supprimer l'événement">
+           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+        </button>
+
+        <!-- Card Image Area -->
+        <div class="h-48 w-full bg-gray-100 relative">
+          <img *ngIf="ev.bannerUrl" [src]="ev.bannerUrl" class="w-full h-full object-cover" alt="Banner"/>
+          <div *ngIf="!ev.bannerUrl" class="w-full h-full bg-gradient-to-br from-teal-50 to-teal-100 flex items-center justify-center">
+            <svg class="w-16 h-16 text-teal-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
           </div>
           
-          <div *ngIf="inviteSuccess()" class="p-3 bg-emerald-50 text-emerald-700 rounded-xl text-[11px] font-bold border border-emerald-100">✓ Invitation envoyée avec succès</div>
-          <div *ngIf="inviteError()" class="p-3 bg-rose-50 text-rose-700 rounded-xl text-[11px] font-bold border border-rose-100">⚠ {{ inviteError() }}</div>
-
-          <div class="flex gap-3 pt-4">
-            <button (click)="closeInviteModal()" class="flex-1 py-4 btn-pro btn-outline-pro">Fermer</button>
-            <button (click)="sendGuestInvite()" [disabled]="!inviteGuestEmail" class="flex-1 py-4 btn-pro btn-primary-pro disabled:opacity-30">Inviter</button>
+          <div class="absolute top-4 left-4 z-[50]">
+             <span [class]="isOnline(ev) ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-gray-100 text-gray-800 border-gray-200'" 
+                   class="px-2 py-1 rounded-md text-[10px] font-bold border shadow-sm flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full" [ngClass]="isOnline(ev) ? 'bg-indigo-600 animate-pulse' : 'bg-gray-500'"></span>
+                {{ isOnline(ev) ? 'En ligne' : 'Présentiel' }}
+             </span>
           </div>
+        </div>
+
+        <!-- Card Content Body -->
+        <div class="p-6 flex-1 flex flex-col">
+          <div class="flex items-center text-xs text-gray-500 mb-3 font-medium">
+             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+             {{ ev.eventDate | date:'dd MMM yyyy à HH:mm' }}
+          </div>
+
+          <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
+            {{ ev.title }}
+          </h3>
+          
+          <p class="text-sm text-gray-500 line-clamp-2 mb-6 flex-1">
+            {{ ev.description }}
+          </p>
+
+          <div class="pt-4 border-t border-gray-100 flex items-center justify-between mt-auto">
+            <div class="flex items-center text-sm">
+               <span class="font-bold text-gray-900 mr-1">{{ ev.confirmedCount || 0 }}</span>
+               <span class="text-gray-500">inscrits</span>
+            </div>
+            
+            <div class="flex gap-2">
+              <button *ngIf="isOnline(ev)" (click)="$event.stopPropagation(); openInviteModal(ev)" 
+                      class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                Inviter
+              </button>
+              <button *ngIf="canJoinRoom(ev)" [routerLink]="['/events', ev.id, 'room']" (click)="$event.stopPropagation()" 
+                      class="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 group/btn">
+                 <span class="w-1.5 h-1.5 rounded-full bg-red-600 group-hover/btn:bg-white animate-pulse"></span>
+                 Live
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="events().length === 0" class="py-24 text-center bg-white rounded-2xl border border-gray-200 shadow-sm mt-8">
+       <div class="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+          <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+       </div>
+       <h3 class="text-lg font-medium text-gray-900 mb-1">Aucun événement</h3>
+       <p class="text-gray-500 mb-6">Vous n'avez pas encore planifié de conférence.</p>
+       <a routerLink="/doctor/events/create" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700">
+         Créer mon premier événement
+       </a>
+    </div>
+  </div>
+</div>
+
+<!-- Invite Modal -->
+<div *ngIf="inviteModalEvent()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+      <h3 class="text-lg font-bold text-gray-900">Inviter un participant</h3>
+      <button (click)="closeInviteModal()" class="text-gray-400 hover:text-gray-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+    <div class="p-6">
+      <p class="text-sm text-gray-500 mb-4">
+        Envoyer une invitation directe pour l'événement <strong>{{ inviteModalEvent()?.title }}</strong>.
+      </p>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Adresse email</label>
+          <input [(ngModel)]="inviteGuestEmail" type="email" placeholder="nom@exemple.com" 
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors" />
+        </div>
+        
+        <div *ngIf="inviteSuccess()" class="p-3 bg-green-50 text-green-700 rounded-lg text-sm font-medium border border-green-200">
+          ✓ Invitation envoyée avec succès
+        </div>
+        <div *ngIf="inviteError()" class="p-3 bg-red-50 text-red-700 rounded-lg text-sm font-medium border border-red-200">
+          ⚠ {{ inviteError() }}
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button (click)="closeInviteModal()" class="flex-1 px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">Annuler</button>
+          <button (click)="sendGuestInvite()" [disabled]="!inviteGuestEmail" class="flex-1 px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50">Envoyer l'invitation</button>
         </div>
       </div>
     </div>
+  </div>
+</div>
   `,
   styles: [`
-    .tracking-tightest { letter-spacing: -0.04em; }
     .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
   `]
 })
 export class EventMyListComponent implements OnInit {
