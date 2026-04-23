@@ -13,10 +13,10 @@ import * as QRCode from 'qrcode';
   imports: [CommonModule, RouterModule],
   template: `
     <!-- MAIN DETAIL VIEW -->
-    <div *ngIf="!notFound()" class="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900">
+    <div *ngIf="!notFound()" class="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900 no-print">
       
       <!-- Back Nav -->
-      <div class="bg-white border-b border-gray-200 no-print">
+      <div class="bg-white border-b border-gray-200">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <button (click)="goBack()" class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -209,11 +209,11 @@ import * as QRCode from 'qrcode';
     </div>
 
     <!-- TICKET MODAL -->
-    <div *ngIf="showTicket()" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm no-print">
+    <div *ngIf="showTicket()" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm no-print-backdrop">
       <div class="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col relative animate-ticket">
         
         <!-- Ticket Close -->
-        <button (click)="showTicket.set(false)" class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 z-10">
+        <button (click)="showTicket.set(false)" class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 z-10 no-print">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
@@ -295,20 +295,47 @@ import * as QRCode from 'qrcode';
     .leaflet-routing-container { display: none !important; }
 
     @media print {
-      .no-print { display: none !important; }
-      body { background: white !important; }
-      #printable-ticket {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: auto;
-        z-index: 9999;
-        margin: 0;
-        padding: 0;
-        border: none;
+      /* Hide all layout noise */
+      app-navbar, app-footer, app-admin-navbar, app-admin-footer, .no-print, .no-print-backdrop { 
+        display: none !important; 
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
-      .animate-ticket { animation: none !important; transform: none !important; }
+      
+      html, body { 
+        height: auto !important;
+        background: white !important; 
+        padding: 0 !important;
+        margin: 0 !important;
+        visibility: hidden !important;
+      }
+
+      /* Show ONLY the ticket */
+      #printable-ticket {
+        visibility: visible !important;
+        display: block !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 40px !important;
+        border: none !important;
+        border-radius: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        box-shadow: none !important;
+      }
+
+      #printable-ticket * {
+        visibility: visible !important;
+      }
+
+      /* Clean up page breaks */
+      * { -webkit-print-color-adjust: exact !important; }
+      @page { size: auto; margin: 0; }
     }
 
     .animate-ticket { animation: ticketSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
