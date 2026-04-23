@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { EventService, MedicalEvent } from '../../core/services/event.service';
 import { AuthFacade } from '../../core/services/auth.facade';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-landing',
@@ -15,7 +16,27 @@ export class LandingComponent implements OnInit, OnDestroy {
   private eventService = inject(EventService);
   public authFacade = inject(AuthFacade);
 
-  events = signal<MedicalEvent[]>([]);
+  private allEvents = signal<MedicalEvent[]>([]);
+  private currentUser = toSignal(this.authFacade.currentUser$);
+  
+  // Use a computed signal for filtering to ensure it reacts to auth state changes
+  events = computed(() => {
+    const user = this.currentUser();
+    const userRole = user?.userType?.toUpperCase();
+    
+    return this.allEvents().filter(e => {
+      const audience = (e.targetAudience || 'PUBLIC').toUpperCase();
+      
+      // Doctors see both PUBLIC and DOCTOR-specific events
+      if (userRole === 'DOCTOR') {
+        return true; 
+      }
+      
+      // Everyone else (Patients, Guests, Admins on landing) only see PUBLIC events
+      return audience === 'PUBLIC';
+    }).slice(0, 3); // Show only top 3 matching
+  });
+
   isLoggedIn = this.authFacade.isLoggedIn$;
 
   // Stats counter animation
@@ -104,7 +125,7 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   loadEvents() {
     this.eventService.getActiveEvents().subscribe(res => {
-      this.events.set(res.slice(0, 3)); // Show top 3 events
+      this.allEvents.set(res);
     });
   }
 

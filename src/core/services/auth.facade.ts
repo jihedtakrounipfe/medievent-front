@@ -211,10 +211,12 @@ private _currentUser$ = new BehaviorSubject<AnyUser | null>(null);
   }
 
   private redirectAfterLogin(user: AnyUser): void {
-    if (isAdministrator(user)) { this.router.navigate(['/admin/dashboard']); return; }
-    if (user.userType === 'PATIENT') { this.router.navigate(['/']); return; }
-    if (user.userType === 'DOCTOR') { this.router.navigate(['/doctor/profile']); return; }
-    this.router.navigate(['/profile']);
+    if (isAdministrator(user)) { 
+      this.router.navigate(['/admin/dashboard']); 
+      return; 
+    }
+    // All other users (Doctors, Patients) go to the landing page (Home)
+    this.router.navigate(['/']);
   }
 
   private setLoading(state: boolean): void { this._loading$.next(state); }

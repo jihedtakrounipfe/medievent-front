@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { EventService, MedicalEvent } from '../../../core/services/event.service';
+import { EventService, MedicalEvent, Participant } from '../../../core/services/event.service';
 import { Router, RouterModule } from '@angular/router';
 
 @Component({
@@ -110,6 +110,10 @@ import { Router, RouterModule } from '@angular/router';
             </div>
             
             <div class="flex gap-2">
+              <button (click)="$event.stopPropagation(); openParticipantsModal(ev)" 
+                      class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                Participants
+              </button>
               <button *ngIf="isOnline(ev)" (click)="$event.stopPropagation(); openInviteModal(ev)" 
                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                 Inviter
@@ -136,6 +140,69 @@ import { Router, RouterModule } from '@angular/router';
        <a routerLink="/doctor/events/create" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700">
          Créer mon premier événement
        </a>
+    </div>
+  </div>
+</div>
+
+<!-- Participants Modal -->
+<div *ngIf="participantsModalEvent()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+  <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+      <div>
+        <h3 class="text-xl font-black text-gray-900 tracking-tight">Liste des Participants</h3>
+        <p class="text-xs text-gray-500 mt-1 font-medium">{{ participantsModalEvent()?.title }}</p>
+      </div>
+      <button (click)="closeParticipantsModal()" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors text-gray-400">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+    
+    <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+       <!-- Stats within Modal -->
+       <div class="grid grid-cols-2 gap-4 mb-8">
+          <div class="bg-teal-50 p-4 rounded-2xl border border-teal-100">
+             <p class="text-[10px] font-bold text-teal-600 uppercase tracking-widest">Confirmés</p>
+             <p class="text-2xl font-black text-teal-900 mt-1">{{ participants().length }}</p>
+          </div>
+          <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+             <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Capacité</p>
+             <p class="text-2xl font-black text-gray-900 mt-1">{{ participantsModalEvent()?.maxParticipants || '∞' }}</p>
+          </div>
+       </div>
+
+       <!-- Participants Table -->
+       <div *ngIf="participants().length > 0" class="space-y-3">
+          <div *ngFor="let p of participants()" class="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-teal-200 hover:shadow-sm transition-all group">
+             <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-black text-gray-500 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                   {{ p.userName.charAt(0) }}
+                </div>
+                <div>
+                   <p class="text-sm font-bold text-gray-900">{{ p.userName }}</p>
+                   <p class="text-xs text-gray-500">{{ p.userEmail }}</p>
+                </div>
+             </div>
+             <div class="flex items-center gap-3">
+                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-700 border border-green-100">
+                   {{ p.role === 'GUEST' ? 'INVITÉ' : 'INSCRIT' }}
+                </span>
+             </div>
+          </div>
+       </div>
+
+       <!-- Empty state for participants -->
+       <div *ngIf="participants().length === 0" class="py-12 text-center">
+          <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+          </div>
+          <p class="text-gray-500 text-sm font-bold">Aucun participant pour le moment</p>
+       </div>
+    </div>
+
+    <div class="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+       <button (click)="closeParticipantsModal()" class="px-6 py-2.5 bg-gray-900 text-white text-[11px] font-black rounded-xl hover:bg-gray-800 transition-all uppercase tracking-widest shadow-lg shadow-gray-200">
+          FERMER
+       </button>
     </div>
   </div>
 </div>
@@ -191,6 +258,10 @@ export class EventMyListComponent implements OnInit {
   inviteSuccess    = signal(false);
   inviteError      = signal('');
 
+  participantsModalEvent = signal<MedicalEvent | null>(null);
+  participants = signal<Participant[]>([]);
+  loadingParticipants = signal(false);
+
   ngOnInit() {
     this.loadEvents();
   }
@@ -225,6 +296,24 @@ export class EventMyListComponent implements OnInit {
 
   closeInviteModal() {
     this.inviteModalEvent.set(null);
+  }
+
+  openParticipantsModal(ev: MedicalEvent) {
+    if (!ev.id) return;
+    this.participantsModalEvent.set(ev);
+    this.participants.set([]);
+    this.loadingParticipants.set(true);
+    this.eventService.getEventParticipants(ev.id).subscribe({
+      next: (res) => {
+        this.participants.set(res.filter(p => p.status === 'CONFIRMED'));
+        this.loadingParticipants.set(false);
+      },
+      error: () => this.loadingParticipants.set(false)
+    });
+  }
+
+  closeParticipantsModal() {
+    this.participantsModalEvent.set(null);
   }
 
   sendGuestInvite() {

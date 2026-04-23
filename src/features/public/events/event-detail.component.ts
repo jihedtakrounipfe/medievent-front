@@ -5,6 +5,7 @@ import { EventService, MedicalEvent, ParticipantStatus, Participant } from '../.
 import { AuthFacade } from '../../../core/services/auth.facade';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { catchError, of, Subscription } from 'rxjs';
+import * as QRCode from 'qrcode';
 
 @Component({
   selector: 'app-event-detail',
@@ -15,7 +16,7 @@ import { catchError, of, Subscription } from 'rxjs';
     <div *ngIf="!notFound()" class="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900">
       
       <!-- Back Nav -->
-      <div class="bg-white border-b border-gray-200">
+      <div class="bg-white border-b border-gray-200 no-print">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <button (click)="goBack()" class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -31,9 +32,11 @@ import { catchError, of, Subscription } from 'rxjs';
             </span>
           </div>
         </div>
-      </div>      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      </div>
+
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <!-- Hero Banner -->
-        <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden mb-8 group">
+        <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden mb-8 group no-print">
           <div class="h-80 sm:h-96 w-full bg-gray-100 relative overflow-hidden">
             <img *ngIf="event()?.bannerUrl" [src]="event()?.bannerUrl" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Event Banner">
             <div *ngIf="!event()?.bannerUrl" class="w-full h-full bg-gradient-to-br from-teal-600 via-teal-700 to-indigo-900 flex items-center justify-center">
@@ -65,7 +68,7 @@ import { catchError, of, Subscription } from 'rxjs';
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
           
           <!-- Main Details -->
-          <div class="lg:col-span-2 space-y-10">
+          <div class="lg:col-span-2 space-y-10 no-print">
             
             <!-- Agenda -->
             <div *ngIf="event()?.agenda" class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-10 relative overflow-hidden">
@@ -104,7 +107,7 @@ import { catchError, of, Subscription } from 'rxjs';
           </div>
 
           <!-- Sidebar -->
-          <div class="lg:col-span-1">
+          <div class="lg:col-span-1 no-print">
             <div class="bg-white rounded-[2.5rem] shadow-xl shadow-gray-200/30 border border-gray-100 p-8 sticky top-24">
               
               <div class="space-y-8">
@@ -150,14 +153,33 @@ import { catchError, of, Subscription } from 'rxjs';
                         {{ actionLoading() ? "TRAITEMENT..." : "RÉSERVER MA PLACE" }}
                       </button>
 
-                      <div *ngIf="participationStatus()" class="space-y-3">
+                      <div *ngIf="participationStatus() === 'CONFIRMED'" class="space-y-3">
                          <div class="w-full py-4 px-6 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-2xl border border-emerald-100 flex items-center justify-center gap-2">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
                             INSCRIPTION CONFIRMÉE
                          </div>
+                         <button (click)="openTicket()" 
+                                 class="w-full py-4 px-6 bg-gray-900 text-white text-xs font-bold rounded-2xl shadow-xl shadow-gray-400/20 transition-all active:scale-[0.98] uppercase tracking-widest flex items-center justify-center gap-2 no-print">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5z" /></svg>
+                            VOIR MON PASS
+                         </button>
                          <button (click)="cancel()" [disabled]="actionLoading()"
-                                 class="w-full py-3 text-[10px] font-bold text-gray-400 hover:text-rose-500 uppercase tracking-widest transition-colors">
+                                 class="w-full py-3 text-[10px] font-bold text-gray-400 hover:text-rose-500 uppercase tracking-widest transition-colors no-print">
                            Se désister
+                         </button>
+                      </div>
+
+                      <div *ngIf="participationStatus() === 'PENDING_INVITE' || participationStatus() === 'WAITING_LIST'" class="space-y-3">
+                         <div class="w-full py-4 px-6 bg-amber-50 text-amber-700 text-xs font-bold rounded-2xl border border-amber-100 flex flex-col items-center justify-center gap-1">
+                            <div class="flex items-center gap-2">
+                               <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                               LISTE D'ATTENTE
+                            </div>
+                            <span *ngIf="waitlistRank()" class="text-[9px] opacity-70">Position: {{ waitlistRank() }}</span>
+                         </div>
+                         <button (click)="cancel()" [disabled]="actionLoading()"
+                                 class="w-full py-3 text-[10px] font-bold text-gray-400 hover:text-rose-500 uppercase tracking-widest transition-colors no-print">
+                           Annuler la demande
                          </button>
                       </div>
                    </ng-container>
@@ -186,8 +208,77 @@ import { catchError, of, Subscription } from 'rxjs';
       </div>
     </div>
 
+    <!-- TICKET MODAL -->
+    <div *ngIf="showTicket()" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm no-print">
+      <div class="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col relative animate-ticket">
+        
+        <!-- Ticket Close -->
+        <button (click)="showTicket.set(false)" class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 z-10">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+
+        <div id="printable-ticket" class="p-0 bg-white">
+          <!-- Ticket Top -->
+          <div class="bg-teal-600 p-8 text-white relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-8 opacity-10">
+               <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <p class="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-2">PASS DE PARTICIPATION</p>
+            <h3 class="text-2xl font-black tracking-tight leading-tight">{{ event()?.title }}</h3>
+          </div>
+
+          <!-- Ticket Content -->
+          <div class="p-10 space-y-8 bg-white">
+            <div class="grid grid-cols-2 gap-8">
+               <div>
+                  <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">PARTICIPANT</p>
+                  <p class="text-sm font-black text-gray-900">{{ authFacade.currentUser?.firstName }} {{ authFacade.currentUser?.lastName }}</p>
+               </div>
+               <div>
+                  <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">DATE & HEURE</p>
+                  <p class="text-sm font-black text-gray-900">{{ event()?.eventDate | date:'dd MMM yyyy, HH:mm' }}</p>
+               </div>
+            </div>
+
+            <div>
+               <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">LIEU / ACCÈS</p>
+               <p class="text-sm font-black text-gray-900 truncate">{{ event()?.location }}</p>
+            </div>
+
+            <!-- QR Code Area -->
+            <div class="flex flex-col items-center justify-center pt-6 border-t border-dashed border-gray-200">
+               <div class="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm mb-4">
+                  <img [src]="ticketQrCode()" class="w-40 h-40" alt="QR Code">
+               </div>
+               <p class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Scanner pour vérification</p>
+            </div>
+          </div>
+
+          <!-- Ticket Footer -->
+          <div class="px-10 py-6 bg-gray-50 flex items-center justify-between border-t border-gray-100">
+             <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white font-black text-xs">M</div>
+                <span class="text-xs font-black text-gray-900 tracking-tighter">MediConnect</span>
+             </div>
+             <p class="text-[9px] font-bold text-gray-400">ID: #{{ event()?.id }}-{{ authFacade.currentUser?.id }}</p>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="p-6 bg-white flex gap-3 no-print">
+          <button (click)="showTicket.set(false)" class="flex-1 px-6 py-3 border border-gray-200 text-[10px] font-black rounded-xl hover:bg-gray-50 transition-all uppercase tracking-widest">
+             Fermer
+          </button>
+          <button (click)="printTicket()" class="flex-1 px-6 py-3 bg-teal-600 text-white text-[10px] font-black rounded-xl hover:bg-teal-500 transition-all uppercase tracking-widest shadow-lg shadow-teal-900/10 flex items-center justify-center gap-2">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+             Imprimer le Pass
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 404 NOT FOUND STATE -->
-    <div *ngIf="notFound()" class="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <div *ngIf="notFound()" class="min-h-screen bg-gray-50 flex items-center justify-center p-6 no-print">
       <div class="max-w-md w-full text-center space-y-8 bg-white p-10 rounded-3xl shadow-sm border border-gray-200">
         <div class="text-6xl mb-4">🏥</div>
         <h2 class="text-2xl font-bold text-gray-900">Événement Introuvable</h2>
@@ -202,13 +293,36 @@ import { catchError, of, Subscription } from 'rxjs';
     #map { z-index: 10 !important; border-radius: 0 0 2.5rem 2.5rem; }
     .leaflet-container { border-bottom: 1px solid #f3f4f6; }
     .leaflet-routing-container { display: none !important; }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+      #printable-ticket {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: auto;
+        z-index: 9999;
+        margin: 0;
+        padding: 0;
+        border: none;
+      }
+      .animate-ticket { animation: none !important; transform: none !important; }
+    }
+
+    .animate-ticket { animation: ticketSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes ticketSlideUp {
+      from { opacity: 0; transform: translateY(40px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
   `]
 })
 export class EventDetailComponent implements OnInit {
   private route        = inject(ActivatedRoute);
   private router       = inject(Router);
   private eventService = inject(EventService);
-  private authFacade   = inject(AuthFacade);
+  public authFacade    = inject(AuthFacade);
   private sanitizer    = inject(DomSanitizer);
 
   event               = signal<MedicalEvent | null>(null);
@@ -218,6 +332,9 @@ export class EventDetailComponent implements OnInit {
   participationStatus = signal<ParticipantStatus | undefined>(undefined);
   waitlistRank        = signal<number | undefined>(undefined);
   participants        = signal<Participant[]>([]);
+  
+  showTicket          = signal(false);
+  ticketQrCode        = signal('');
   
   private map: any;
 
@@ -306,18 +423,6 @@ export class EventDetailComponent implements OnInit {
       .catch(err => console.error('Map init failed:', err));
   }
 
-  private showOnlyMarker(coords: any, loc: string) {
-    const L = (window as any).L;
-    L.marker(coords, {
-      icon: L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41]
-      })
-    }).addTo(this.map).bindPopup(`<b>${this.event()?.title}</b><br>${loc}`).openPopup();
-  }
-
   loadParticipants(id: number) {
     this.eventService.getEventParticipants(id).subscribe(p => this.participants.set(p));
   }
@@ -387,18 +492,45 @@ export class EventDetailComponent implements OnInit {
     });
   }
 
-  getMapUrl(location: string): SafeResourceUrl {
-    const encoded = encodeURIComponent(location);
-    // Explicitly using iwloc=B and layout parameters to force the RED Marker to drop exactly on the address.
-    return this.sanitizer.bypassSecurityTrustResourceUrl(`https://maps.google.com/maps?width=100%25&height=600&hl=fr&q=${encoded}&t=&z=15&ie=UTF8&iwloc=B&output=embed`);
-  }
-
   formatLabel(s: string): string {
     if (!s) return '';
     return s.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
+  async openTicket() {
+    const ev = this.event();
+    const user = this.authFacade.currentUser;
+    if (!ev || !user) return;
+
+    // Generate QR Content: simple verification payload
+    const qrData = JSON.stringify({
+      eventId: ev.id,
+      userId: user.id,
+      title: ev.title,
+      date: ev.eventDate,
+      ts: Date.now()
+    });
+
+    try {
+      const dataUrl = await QRCode.toDataURL(qrData, {
+        width: 400,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      });
+      this.ticketQrCode.set(dataUrl);
+      this.showTicket.set(true);
+    } catch (err) {
+      console.error('Failed to generate QR code', err);
+    }
+  }
+
+  printTicket() {
+    window.print();
+  }
+
   encode(s: string): string { return encodeURIComponent(s); }
   goBack() { this.router.navigate(['/events']); }
 }
-

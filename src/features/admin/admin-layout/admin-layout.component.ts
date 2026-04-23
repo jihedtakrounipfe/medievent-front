@@ -78,9 +78,6 @@ import { EventService } from '../../../core/services/event.service';
               </svg>
             </div>
             <span class="nav-text">Événements</span>
-            <span *ngIf="pendingEventsCount() > 0" class="ml-auto px-1.5 py-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full">
-               {{ pendingEventsCount() }}
-            </span>
           </a>
           <a routerLink="/admin/users" routerLinkActive="nav-active" 
              class="nav-link group">
@@ -311,7 +308,7 @@ export class AdminLayoutComponent {
   isSidebarCollapsed = signal(false);
   isNotificationsOpen = signal(false);
   pendingDoctors = signal(0); 
-  pendingEventsCount = signal(0);
+
 
   constructor() {
     this.refreshStats();
@@ -321,11 +318,6 @@ export class AdminLayoutComponent {
     this.userService.getAdminStats().subscribe({
       next: stats => this.pendingDoctors.set(stats.pendingDoctors),
       error: () => console.error('Failed to fetch admin stats for sidebar')
-    });
-
-    this.eventService.getPendingEvents().subscribe({
-      next: events => this.pendingEventsCount.set(events.length),
-      error: () => console.error('Failed to fetch pending events')
     });
   }
 

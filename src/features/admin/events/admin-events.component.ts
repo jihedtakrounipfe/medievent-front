@@ -1,12 +1,12 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EventService, MedicalEvent } from '../../../core/services/event.service';
-import { FormsModule } from '@angular/forms';
+
 
 @Component({
   selector: 'app-admin-events',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   template: `
     <div class="space-y-8">
       <!-- Header -->
@@ -22,22 +22,14 @@ import { FormsModule } from '@angular/forms';
       </div>
 
       <!-- Overview Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="bg-teal-600 p-6 rounded-[2rem] shadow-xl shadow-teal-900/10">
-          <p class="text-[9px] font-bold text-teal-100 uppercase tracking-widest opacity-80">Événements Actifs</p>
-          <p class="text-3xl font-black text-white mt-1">{{ approvedCount() }}</p>
+          <p class="text-[9px] font-bold text-teal-100 uppercase tracking-widest opacity-80">Catalogue Actif</p>
+          <p class="text-3xl font-black text-white mt-1">{{ events().length }}</p>
         </div>
         <div class="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm">
-          <p class="text-[9px] font-bold text-stone-400 uppercase tracking-widest">En Attente</p>
-          <p class="text-3xl font-black text-stone-900 mt-1">{{ pendingCount() }}</p>
-        </div>
-        <div class="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm">
-          <p class="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Global</p>
-          <p class="text-3xl font-black text-stone-900 mt-1">{{ events().length }}</p>
-        </div>
-        <div class="bg-rose-50 p-6 rounded-[2rem] border border-rose-100">
-           <p class="text-[9px] font-bold text-rose-400 uppercase tracking-widest">Rejetés</p>
-           <p class="text-3xl font-black text-rose-600 mt-1">{{ events().length - approvedCount() - pendingCount() }}</p>
+          <p class="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Responsables Engagés</p>
+          <p class="text-3xl font-black text-stone-900 mt-1">{{ uniqueOrganizersCount() }}</p>
         </div>
       </div>
 
@@ -50,7 +42,6 @@ import { FormsModule } from '@angular/forms';
                 <th class="px-8 py-5 text-[9px] font-bold text-stone-400 uppercase tracking-[0.2em]">Détails Événement</th>
                 <th class="px-8 py-5 text-[9px] font-bold text-stone-400 uppercase tracking-[0.2em]">Responsable</th>
                 <th class="px-8 py-5 text-[9px] font-bold text-stone-400 uppercase tracking-[0.2em]">Confidentialité</th>
-                <th class="px-8 py-5 text-[9px] font-bold text-stone-400 uppercase tracking-[0.2em]">État Actuel</th>
                 <th class="px-8 py-5 text-[9px] font-bold text-stone-400 uppercase tracking-[0.2em] text-right">Contrôle</th>
               </tr>
             </thead>
@@ -79,18 +70,8 @@ import { FormsModule } from '@angular/forms';
                     {{ ev.targetAudience === 'DOCTORS_ONLY' ? 'RESTEINT' : 'OUVERT' }}
                   </span>
                 </td>
-                <td class="px-8 py-6">
-                  <div class="flex items-center gap-2">
-                     <span [class]="statusClass(ev.status!)" class="w-2 h-2 rounded-full"></span>
-                     <span class="text-[10px] font-black text-stone-600 uppercase tracking-widest">{{ ev.status }}</span>
-                  </div>
-                </td>
                 <td class="px-8 py-6 text-right">
                   <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button *ngIf="ev.status !== 'REJECTED'" (click)="openReject(ev)" 
-                            class="px-4 py-2 bg-stone-100 text-stone-500 text-[9px] font-black rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-all uppercase tracking-widest">
-                      RÉVOQUER
-                    </button>
                     <button (click)="delete(ev.id!)" class="p-2.5 bg-stone-50 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -112,33 +93,6 @@ import { FormsModule } from '@angular/forms';
         </div>
       </div>
     </div>
-
-    <!-- Rejection Modal -->
-    <div *ngIf="modalEvent()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm shadow-2xl">
-      <div class="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl fade-in border border-stone-200">
-        <div class="p-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center">
-              ⚠️
-            </div>
-            <h3 class="text-lg font-bold text-stone-900">Motif du refus</h3>
-          </div>
-          <p class="text-xs text-stone-500 mb-4">L'organisateur sera informé de la raison du refus.</p>
-          <textarea [(ngModel)]="rejectionReason" 
-                    placeholder="Expliquez pourquoi l'événement a été refusé..."
-                    class="w-full h-32 p-4 bg-stone-50 border-stone-200 border rounded-2xl text-sm focus:ring-4 focus:ring-rose-50 focus:border-rose-300 transition-all outline-none resize-none"></textarea>
-          
-          <div class="flex gap-3 mt-6">
-            <button (click)="modalEvent.set(null)" class="flex-1 py-3 text-sm font-bold text-stone-500 hover:bg-stone-50 rounded-2xl transition-all">ANNULER</button>
-            <button (click)="confirmReject()" 
-                    [disabled]="!rejectionReason"
-                    class="flex-1 py-3 text-sm font-bold bg-rose-600 text-white rounded-2xl hover:bg-rose-700 shadow-lg shadow-rose-100 transition-all disabled:opacity-50">
-              REFUSER L'ÉVÉNEMENT
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   `,
   styles: [`
     .fade-in { animation: fadeIn 0.3s ease-out; }
@@ -149,11 +103,10 @@ export class AdminEventsComponent implements OnInit {
   private eventService = inject(EventService);
 
   events = signal<MedicalEvent[]>([]);
-  modalEvent = signal<MedicalEvent | null>(null);
-  rejectionReason = '';
-
-  pendingCount = signal(0);
-  approvedCount = signal(0);
+  uniqueOrganizersCount = computed(() => {
+    const names = this.events().map(e => e.organizerName).filter(Boolean);
+    return new Set(names).size;
+  });
 
   ngOnInit() {
     this.loadEvents();
@@ -162,26 +115,6 @@ export class AdminEventsComponent implements OnInit {
   loadEvents() {
     this.eventService.getAllEventsForAdmin().subscribe(res => {
       this.events.set(res);
-      this.pendingCount.set(res.filter(e => e.status === 'PENDING').length);
-      this.approvedCount.set(res.filter(e => e.status === 'APPROVED').length);
-    });
-  }
-
-  approve(id: number) {
-    this.eventService.approveEvent(id).subscribe(() => this.loadEvents());
-  }
-
-  openReject(ev: MedicalEvent) {
-    this.modalEvent.set(ev);
-    this.rejectionReason = '';
-  }
-
-  confirmReject() {
-    const ev = this.modalEvent();
-    if (!ev) return;
-    this.eventService.rejectEvent(ev.id!, this.rejectionReason).subscribe(() => {
-      this.modalEvent.set(null);
-      this.loadEvents();
     });
   }
 
@@ -189,14 +122,5 @@ export class AdminEventsComponent implements OnInit {
     if (confirm('Supprimer cet événement ?')) {
       this.eventService.deleteEventForAdmin(id).subscribe(() => this.loadEvents());
     }
-  }
-
-  statusClass(status: string): string {
-    const m: any = {
-      'PENDING': 'bg-amber-100 text-amber-700',
-      'APPROVED': 'bg-teal-100 text-teal-700',
-      'REJECTED': 'bg-rose-100 text-rose-700'
-    };
-    return m[status] || 'bg-stone-100 text-stone-700';
   }
 }
