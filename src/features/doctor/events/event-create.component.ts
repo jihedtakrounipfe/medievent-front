@@ -6,6 +6,10 @@ import { UploadService } from '../../../core/services/upload.service';
 import { Router } from '@angular/router';
 import { Specialization } from '../../../core/user/enums/specialization.enum';
 import { AuthFacade } from '../../../core/services/auth.facade';
+import { UserService } from '../../../core/services/user.service';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { Doctor } from '../../../core/user';
 
 export function futureDateValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -17,6 +21,7 @@ export function futureDateValidator(): ValidatorFn {
     return selectedDate <= now ? { pastDate: true } : null;
   };
 }
+
 @Component({
   selector: 'app-event-create',
   standalone: true,
@@ -174,21 +179,83 @@ export function futureDateValidator(): ValidatorFn {
                  Intervenant & Programme
               </h3>
               
-              <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-                   <div class="md:col-span-4">
-                     <label class="block text-sm font-medium text-gray-700 mb-1">Intervenant <span class="text-red-500">*</span></label>
-                     <input type="text" formControlName="speakerName" placeholder="Dr. Dupont" 
-                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('speakerName'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('speakerName')}"
-                            class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none" />
-                     <p *ngIf="isFieldInvalid('speakerName')" class="mt-1 text-xs text-red-500">Requis.</p>
+                <div class="space-y-4">
+                  <label class="block text-sm font-medium text-gray-700">Invitations : Co-présentateurs <span class="text-red-500">*</span></label>
+                  
+                  <!-- Search Doctors -->
+                  <div class="relative">
+                    <div class="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-teal-500 transition-all">
+                      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                      <input type="text" (input)="onDoctorSearch($event)" placeholder="Rechercher un docteur par nom ou spécialité..." class="bg-transparent border-none outline-none flex-1 text-sm text-gray-900 placeholder-gray-500" />
+                    </div>
+
+                    <!-- Search Results Dropdown -->
+                    <div *ngIf="doctorResults().length > 0" class="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                      <div *ngFor="let doc of doctorResults()" class="p-3 hover:bg-teal-50 cursor-pointer flex items-center justify-between border-b border-gray-100 last:border-none transition-colors">
+                        <div class="flex items-center gap-3">
+                          <div class="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm">
+                            {{ doc.firstName[0] }}{{ doc.lastName[0] }}
+                          </div>
+                          <div>
+                            <p class="text-sm font-bold text-gray-900">{{ doc.firstName }} {{ doc.lastName }}</p>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wide">{{ formatLabel(doc.specialization) }}</p>
+                          </div>
+                        </div>
+                        <div class="flex gap-2">
+                           <button (click)="addStaff(doc, 'SPEAKER')" class="text-[10px] font-bold text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg hover:bg-teal-100 transition-colors flex items-center gap-1.5">
+                              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                              Présentateur
+                           </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Selected Staff List -->
+                  <div class="space-y-4">
+                    <!-- Speakers -->
+                    <div *ngIf="selectedSpeakers().length > 0">
+                       <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Présentateurs / Intervenants</p>
+                       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div *ngFor="let s of selectedSpeakers()" class="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between shadow-sm group hover:border-teal-200 transition-all">
+                            <div class="flex items-center gap-3">
+                              <div class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+                                {{ s.fullName[0] }}
+                              </div>
+                              <div>
+                                <p class="text-xs font-bold text-gray-900">{{ s.fullName }}</p>
+                                <p class="text-[9px] text-gray-500">{{ s.specialization || 'Médecin' }}</p>
+                              </div>
+                            </div>
+                            <button (click)="removeStaff(s.id, 'SPEAKER')" class="text-gray-400 hover:text-red-500 transition-colors p-1 opacity-0 group-hover:opacity-100">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div *ngIf="selectedSpeakers().length === 0" class="py-10 border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center text-gray-400 bg-gray-50/30">
+                    <svg class="w-10 h-10 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <p class="text-xs font-bold uppercase tracking-widest opacity-60">Aucun co-présentateur ajouté</p>
+                  </div>
+
+                <!-- External Speaker (Guest) -->
+                <div class="pt-6 border-t border-gray-100">
+                   <div class="flex items-center gap-2 mb-4">
+                      <input type="checkbox" #hasExternal (change)="0" class="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                      <label class="text-sm font-bold text-gray-700">Ajouter un intervenant externe (Guest)</label>
                    </div>
-                   <div class="md:col-span-8">
-                     <label class="block text-sm font-medium text-gray-700 mb-1">Biographie brève <span class="text-red-500">*</span></label>
-                     <input type="text" formControlName="speakerBio" placeholder="Expertise, Titres..." 
-                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('speakerBio'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('speakerBio')}"
-                            class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none" />
-                     <p *ngIf="isFieldInvalid('speakerBio')" class="mt-1 text-xs text-red-500">Requis.</p>
+                   
+                   <div *ngIf="hasExternal.checked" class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+                      <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nom Complet</label>
+                        <input type="text" formControlName="speakerName" placeholder="Ex: Pr. Sarah Miller" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Expertise / Bio</label>
+                        <input type="text" formControlName="speakerBio" placeholder="Université de Stanford..." class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                      </div>
                    </div>
                 </div>
 
@@ -199,8 +266,8 @@ export function futureDateValidator(): ValidatorFn {
                             class="w-full h-32 px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none resize-y"></textarea>
                   <p *ngIf="isFieldInvalid('agenda')" class="mt-1 text-xs text-red-500">L'agenda est requis.</p>
                 </div>
-              </div>
             </div>
+          </div>
 
           </form>
         </div>
@@ -244,11 +311,18 @@ export function futureDateValidator(): ValidatorFn {
                       {{ eventForm.value.title || 'Titre de votre événement' }}
                     </h3>
 
-                    <div class="mt-auto pt-3 border-t border-gray-100 flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center text-sm font-bold border border-teal-100">Dr</div>
-                      <div class="flex flex-col">
-                        <span class="text-[10px] text-gray-500 font-medium leading-none mb-1">Conférencier</span>
-                        <span class="text-xs font-bold text-gray-900">Dr. {{ eventForm.value.speakerName || 'Nom' }}</span>
+                    <div class="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-2">
+                      <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none mb-1">Présentateurs ({{ selectedSpeakers().length }})</span>
+                      <div class="flex -space-x-2 overflow-hidden">
+                        <div *ngFor="let s of selectedSpeakers().slice(0, 4)" class="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold uppercase">
+                          {{ s.fullName[0] }}
+                        </div>
+                        <div *ngIf="selectedSpeakers().length > 4" class="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] font-bold">
+                          +{{ selectedSpeakers().length - 4 }}
+                        </div>
+                        <div *ngIf="selectedSpeakers().length === 0" class="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-teal-50 text-teal-600 flex items-center justify-center text-[10px] font-bold border border-teal-100">
+                          DR
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -300,17 +374,24 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
   private fb           = inject(FormBuilder);
   private eventService = inject(EventService);
   private uploadService = inject(UploadService);
-  private router       = inject(Router);
-  public authFacade   = inject(AuthFacade);
+  private userService   = inject(UserService);
+  private router        = inject(Router);
+  public authFacade     = inject(AuthFacade);
 
   loading         = signal(false);
   uploading       = signal(false);
   locationType    = signal<'online' | 'physical'>('online');
   selectedAddress = signal<string>('');
+  
+  // Speaker selection state
+  doctorResults = signal<Doctor[]>([]);
+  selectedSpeakers = signal<{id: number, fullName: string, email: string, specialization: string}[]>([]);
+  selectedModerators = signal<{id: number, fullName: string, email: string, specialization: string}[]>([]);
+  private searchSubject = new Subject<string>();
 
   specializations = Object.values(Specialization);
 
-  formatLabel(s: string): string {
+  formatLabel(s: string | undefined | null): string {
     if (!s) return '';
     return s.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
@@ -326,8 +407,10 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
     targetAudience: ['DOCTORS_ONLY', [Validators.required]],
     maxParticipants:[50, [Validators.min(1)]],
     specialization: ['', [Validators.required]],
-    speakerName:    ['', [Validators.required]],
-    speakerBio:     ['', [Validators.required]],
+    speakers:       [[]], // List of SpeakerDTO objects
+    moderators:     [[]], // List of SpeakerDTO objects
+    speakerName:    [''], // External Guest Name
+    speakerBio:     [''], // External Guest Bio
     agenda:         ['', [Validators.required]],
     bannerUrl:      ['', [Validators.pattern('https?://.*')]]
   });
@@ -344,9 +427,10 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
   }
 
   getScore(): number {
-    const fields = ['title', 'specialization', 'bannerUrl', 'description', 'eventDate', 'location', 'speakerName', 'speakerBio', 'agenda'];
+    const fields = ['title', 'specialization', 'bannerUrl', 'description', 'eventDate', 'location', 'agenda'];
     const valid = fields.filter(f => this.isFieldValid(f)).length;
-    return Math.round((valid / fields.length) * 100);
+    const speakersValid = this.selectedSpeakers().length > 0 ? 1 : 0;
+    return Math.round(((valid + speakersValid) / (fields.length + 1)) * 100);
   }
 
   toggleAudience(): void {
@@ -370,8 +454,54 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
       });
     }
   }
+  
+  onDoctorSearch(event: any): void {
+    const query = event.target.value;
+    if (query.length < 2) {
+      this.doctorResults.set([]);
+      return;
+    }
+    this.searchSubject.next(query);
+  }
 
-  ngAfterViewInit(): void {}
+  addStaff(doc: Doctor, role: 'SPEAKER' | 'MODERATOR'): void {
+    const list = role === 'SPEAKER' ? this.selectedSpeakers : this.selectedModerators;
+    if (list().some(s => s.id === doc.id)) {
+      this.doctorResults.set([]);
+      return;
+    }
+    const staff = {
+      id: doc.id,
+      fullName: `${doc.firstName} ${doc.lastName}`,
+      email: doc.email,
+      specialization: this.formatLabel(doc.specialization)
+    };
+    list.update(old => [...old, staff]);
+    this.eventForm.patchValue({ 
+      speakers: this.selectedSpeakers() as any,
+      moderators: this.selectedModerators() as any
+    });
+    this.doctorResults.set([]);
+  }
+
+  removeStaff(id: number, role: 'SPEAKER' | 'MODERATOR'): void {
+    const list = role === 'SPEAKER' ? this.selectedSpeakers : this.selectedModerators;
+    list.update(old => old.filter(s => s.id !== id));
+    this.eventForm.patchValue({ 
+      speakers: this.selectedSpeakers() as any,
+      moderators: this.selectedModerators() as any
+    });
+  }
+
+  ngAfterViewInit(): void {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(q => this.userService.searchUsers({ name: q, userType: 'DOCTOR' as any }))
+    ).subscribe(res => {
+      this.doctorResults.set(res.content as Doctor[]);
+    });
+  }
 
   setLocationType(type: 'online' | 'physical'): void {
     this.locationType.set(type);
@@ -406,7 +536,6 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
     const mapEl = document.getElementById('event-map');
     if (!mapEl || this.map) return;
 
-    // Use default coordinates or current location if possible. Defaulting to Paris for now.
     this.map = L.map('event-map').setView([48.8566, 2.3522], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
@@ -436,7 +565,6 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
 
   onSubmit(): void {
     if (this.eventForm.invalid) {
-      // Mark all fields as touched to trigger validation visuals
       this.eventForm.markAllAsTouched();
       return;
     }

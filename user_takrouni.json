@@ -1,0 +1,13 @@
+{
+  "username": "takrounipc@gmail.com",
+  "email": "takrounipc@gmail.com",
+  "enabled": true,
+  "emailVerified": true,
+  "firstName": "Jihed",
+  "lastName": "Takrouni",
+  "credentials": [{
+    "type": "password",
+    "value": "Password123",
+    "temporary": false
+  }]
+}

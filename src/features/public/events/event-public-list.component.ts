@@ -167,15 +167,24 @@ export class EventPublicListComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.refreshEvents();
+    // Re-fetch events whenever the user state changes to ensure correct visibility
+    this.authFacade.currentUser$.subscribe(() => {
+      this.refreshEvents();
+    });
     this.loadParticipations();
   }
 
   refreshEvents() {
     this.eventService.getActiveEvents().subscribe(res => {
       const user = this.authFacade.currentUser;
-      const isDoc = user?.userType === 'DOCTOR';
-      this.events.set(res.filter(e => isDoc ? (e.targetAudience === 'PUBLIC' || e.targetAudience === 'DOCTORS_ONLY') : e.targetAudience === 'PUBLIC'));
+      // Defensive check for doctor roles (including potential subtypes)
+      const userType = user?.userType?.toString() || '';
+      const isDoc = userType === 'DOCTOR' || userType.startsWith('DOCTOR_');
+      
+      this.events.set(res.filter(e => 
+        isDoc ? (e.targetAudience === 'PUBLIC' || e.targetAudience === 'DOCTORS_ONLY') 
+              : e.targetAudience === 'PUBLIC'
+      ));
     });
   }
 

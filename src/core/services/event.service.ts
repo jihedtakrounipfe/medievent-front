@@ -37,6 +37,13 @@ export interface MedicalEvent {
   maxParticipants?: number;
   confirmedCount?: number;
   waitingListCount?: number;
+  speakers?: {
+    id: number;
+    fullName: string;
+    email: string;
+    specialization?: string;
+    profilePicture?: string;
+  }[];
 }
 
 export interface MyParticipation {
@@ -130,6 +137,10 @@ export class EventService {
     return this.http.delete<void>(`${this.API}/events/participation/${eventId}/cancel`);
   }
 
+  addSpeaker(eventId: number, doctorId: number): Observable<MedicalEvent> {
+    return this.http.post<MedicalEvent>(`${this.API}/doctor/events/${eventId}/speakers/${doctorId}`, {});
+  }
+
   // ─── Signaling (WebRTC) ──────────────────────────────────────────────────
   private readonly STREAM_API = `${environment.apiUrl}/api/v1/stream`;
 
@@ -141,8 +152,12 @@ export class EventService {
     return this.http.get<{ spectators: string[] }>(`${this.STREAM_API}/${eventId}/spectators`);
   }
 
-  unregisterHost(eventId: string): Observable<void> {
-    return this.http.delete<void>(`${this.STREAM_API}/${eventId}/register`, { responseType: 'text' as 'json' });
+  getSignal(eventId: string): Observable<{ isLive: boolean, hosts: string[] }> {
+    return this.http.get<{ isLive: boolean, hosts: string[] }>(`${this.STREAM_API}/${eventId}/signal`);
+  }
+
+  unregisterHost(eventId: string, peerId: string): Observable<void> {
+    return this.http.delete<void>(`${this.STREAM_API}/${eventId}/register/${peerId}`, { responseType: 'text' as 'json' });
   }
 
   registerSpectator(eventId: string, peerId: string): Observable<{ registered: boolean, hostIsLive: boolean }> {
@@ -151,5 +166,23 @@ export class EventService {
 
   unregisterSpectator(eventId: string, peerId: string): Observable<void> {
     return this.http.delete<void>(`${this.STREAM_API}/${eventId}/spectator/${peerId}`, { responseType: 'text' as 'json' });
+  }
+
+  // Hand Raise Moderation
+  requestToSpeak(eventId: string, peerId: string, name: string): Observable<any> {
+    return this.http.post(`${this.STREAM_API}/${eventId}/hand-raise`, { peerId, name });
+  }
+
+  getPendingHandRaises(eventId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.STREAM_API}/${eventId}/hand-raises`);
+  }
+
+  handleHandRaise(eventId: string, peerId: string, action: 'ACCEPT' | 'REJECT'): Observable<any> {
+    return this.http.post(`${this.STREAM_API}/${eventId}/hand-raise/action`, { peerId, action });
+  }
+
+  // User Search
+  searchDoctors(query: string): Observable<any> {
+    return this.http.get<any>(`${this.API}/users/search?name=${query}&userType=DOCTOR&size=5`);
   }
 }

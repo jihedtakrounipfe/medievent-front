@@ -15,6 +15,7 @@ import SockJS from 'sockjs-client';
 declare var Peer: any;
 
 interface ChatMessage {
+  senderId?: number;
   sender: string;
   content: string;
   timestamp: string;
@@ -59,7 +60,7 @@ interface ChatMessage {
       <button (click)="leave()" class="px-4 py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border border-gray-800">
         Quitter
       </button>
-      <button *ngIf="isHost && streamActive()" (click)="endSession()" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors">
+      <button *ngIf="isModerator() && streamActive()" (click)="endSession()" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors">
          Terminer
       </button>
     </div>
@@ -70,7 +71,57 @@ interface ChatMessage {
     <div class="flex-1 relative flex flex-col p-4 sm:p-6 bg-[#0a0a0c]">
       <div class="flex-1 relative rounded-2xl overflow-hidden bg-black border border-gray-800 shadow-2xl flex items-center justify-center">
         
-        <video #mainVideo autoplay playsinline class="absolute inset-0 w-full h-full object-cover"></video>
+        <!-- Video Grid -->
+        <div class="absolute inset-0 grid gap-2 p-2 transition-all duration-500" 
+             [ngClass]="{
+               'grid-cols-1': remoteStreams().length === 1 || (remoteStreams().length === 0 && !isHost),
+               'grid-cols-2': remoteStreams().length === 2,
+               'grid-cols-2 md:grid-cols-3': remoteStreams().length > 2
+             }">
+          
+          <!-- Empty State (No presenters) -->
+          <div *ngIf="remoteStreams().length === 0 && !isHost" class="col-span-full flex items-center justify-center text-gray-500 italic">
+             Aucun présentateur n'est actuellement en direct.
+          </div>
+
+          <!-- Remote Speaker Videos -->
+          <div *ngFor="let rs of remoteStreams()" class="relative rounded-xl overflow-hidden bg-gray-900 border border-gray-800 group shadow-lg">
+             <video [srcObject]="rs.stream" autoplay playsinline [muted]="true" class="w-full h-full object-contain"></video>
+             <div class="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-bold border border-white/10 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                INTERVENANT
+             </div>
+             <!-- Exclude Button -->
+             <button *ngIf="isModerator() && !isPermanentSpeaker(rs.peerId)" (click)="excludeParticipant(rs.peerId)" class="absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-90 z-10" title="Exclure l'intervenant">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+             </button>
+          </div>
+        </div>
+
+        <!-- Local Video PiP (Fixed floating window for presenter) -->
+        <div *ngIf="isHost && streamActive()" class="absolute bottom-4 right-4 w-48 sm:w-64 aspect-video rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-50 bg-gray-900 group">
+           <video #mainVideo autoplay muted playsinline class="w-full h-full object-cover -scale-x-100"></video>
+           <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+              <span class="text-[10px] font-bold text-white uppercase tracking-wider">Votre Retour</span>
+           </div>
+        </div>
+
+        <!-- Moderator Controls: Pending Hand Raises -->
+        <div *ngIf="isModerator() && pendingHandRaises().length > 0" class="absolute top-20 right-4 z-50 flex flex-col gap-3 w-80">
+           <div *ngFor="let req of pendingHandRaises()" class="bg-gray-900/95 backdrop-blur-lg border border-teal-500/30 rounded-2xl p-4 shadow-2xl ring-1 ring-white/10 animate-[slideIn_0.3s_ease-out]">
+              <div class="flex items-center gap-3 mb-3">
+                 <div class="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-xl">✋</div>
+                 <div class="flex flex-col min-w-0">
+                    <span class="text-sm font-bold text-white truncate">{{ req.name }}</span>
+                    <span class="text-[10px] text-teal-400 font-bold uppercase tracking-wider">Demande la parole</span>
+                 </div>
+              </div>
+              <div class="flex gap-2">
+                 <button (click)="acceptHand(req.peerId)" class="flex-1 bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-bold py-2 rounded-xl transition-all shadow-lg shadow-teal-900/20 active:scale-95">Accepter</button>
+                 <button (click)="rejectHand(req.peerId)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-bold py-2 rounded-xl transition-all active:scale-95">Refuser</button>
+              </div>
+           </div>
+        </div>
 
         <!-- Subtitles Overlay -->
         <div *ngIf="isTranscribing() && currentTranscription()" 
@@ -94,10 +145,14 @@ interface ChatMessage {
             </p>
             
             <div *ngIf="isHost">
-              <button *ngIf="cameraReady()" (click)="startDiffusion()" class="w-full py-3 px-4 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(13,148,136,0.3)]">
+              <button *ngIf="cameraReady() && isModerator()" (click)="startDiffusion()" class="w-full py-3 px-4 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(13,148,136,0.3)]">
                 Démarrer la diffusion
               </button>
-              <div *ngIf="!cameraReady()" class="flex items-center justify-center gap-3 text-sm font-bold text-amber-500">
+              <div *ngIf="!isModerator()" class="flex flex-col items-center gap-3">
+                 <div class="animate-pulse text-amber-500 font-bold text-sm">En attente du lancement par l'organisateur...</div>
+                 <p class="text-[10px] text-gray-500">Votre caméra est prête, vous apparaîtrez dès que le direct commencera.</p>
+              </div>
+              <div *ngIf="isModerator() && !cameraReady()" class="flex items-center justify-center gap-3 text-sm font-bold text-amber-500">
                 <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 Calibrage en cours...
               </div>
@@ -111,7 +166,7 @@ interface ChatMessage {
         </div>
 
         <!-- HUD Controls -->
-        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-2xl shadow-xl" *ngIf="streamActive()">
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-2xl shadow-xl" *ngIf="streamActive() || isHost">
           <ng-container *ngIf="isHost">
             <button (click)="toggleMic()" [class.text-red-500]="!micEnabled()" [class.bg-red-500_10]="!micEnabled()" class="w-12 h-12 rounded-xl flex items-center justify-center text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
               <svg *ngIf="micEnabled()" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
@@ -125,6 +180,12 @@ interface ChatMessage {
             <button (click)="toggleScreenShare()" [class.text-teal-400]="screenSharing()" [class.bg-teal-500_10]="screenSharing()" class="w-12 h-12 rounded-xl flex items-center justify-center text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
             </button>
+            <ng-container *ngIf="isModerator()">
+              <div class="w-px h-8 bg-gray-800 mx-1"></div>
+              <button (click)="showInviteModal.set(true)" class="w-12 h-12 rounded-xl flex items-center justify-center text-teal-500 hover:bg-teal-500/10 transition-colors" title="Inviter un confrère">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+              </button>
+            </ng-container>
           </ng-container>
 
           <!-- Transcription Control (Host & Spectator) -->
@@ -165,12 +226,49 @@ interface ChatMessage {
           </ng-container>
         </div>
 
-        <!-- PIP (Host only) -->
-        <div *ngIf="isHost && streamActive()" class="absolute top-6 right-6 w-48 aspect-[4/3] rounded-xl overflow-hidden border border-gray-700 shadow-2xl bg-black z-30 transition-all duration-500" [class.w-64]="!screenSharing()">
-          <video #pipVideo autoplay muted playsinline class="w-full h-full object-cover -scale-x-100"></video>
-          <div class="absolute bottom-2 left-2 bg-gray-900/80 backdrop-blur text-[9px] font-bold px-2 py-1 rounded text-gray-300 flex items-center gap-1.5 border border-gray-700">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            MÉDECIN
+      </div>
+    </div>
+
+    <!-- Invitation Modal -->
+    <div *ngIf="showInviteModal()" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div class="w-full max-w-md bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+        <div class="p-6 border-b border-gray-800 flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-white">Inviter un Présentateur</h3>
+            <p class="text-xs text-gray-500 mt-1">Recherchez un confrère pour l'inviter à intervenir.</p>
+          </div>
+          <button (click)="showInviteModal.set(false)" class="text-gray-500 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        
+        <div class="p-6">
+          <div class="relative mb-6">
+            <input [(ngModel)]="doctorSearchQuery" (input)="searchDoctors()" type="text" placeholder="Nom du docteur..." class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-teal-500 transition-colors">
+          </div>
+
+          <div class="space-y-3 max-h-60 overflow-y-auto pr-2">
+            <div *ngFor="let doc of foundDoctors()" class="flex items-center justify-between p-3 bg-gray-950 border border-gray-800 rounded-xl hover:border-gray-700 transition-colors group">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-500 font-bold border border-teal-500/20">
+                  {{ doc.firstName?.charAt(0) }}{{ doc.lastName?.charAt(0) }}
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-gray-200">Dr. {{ doc.firstName }} {{ doc.lastName }}</h4>
+                  <p class="text-[10px] text-gray-500 uppercase tracking-wider">{{ doc.specialization || 'Médecin' }}</p>
+                </div>
+              </div>
+              <button (click)="inviteDoctor(doc.id)" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-[10px] font-bold rounded-lg transition-all">
+                Inviter
+              </button>
+            </div>
+            <div *ngIf="doctorSearchQuery.length >= 2 && foundDoctors().length === 0" class="text-center py-8">
+              <p class="text-xs text-gray-500">Aucun docteur trouvé.</p>
+            </div>
+          </div>
+
+          <div *ngIf="inviteStatus()" [ngClass]="inviteStatus()?.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'" class="mt-4 p-3 rounded-xl border text-xs font-bold text-center">
+            {{ inviteStatus()?.msg }}
           </div>
         </div>
       </div>
@@ -186,10 +284,11 @@ interface ChatMessage {
       </div>
 
       <div #chatContainer class="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
-        <div *ngFor="let msg of messages()" class="flex flex-col max-w-[90%] text-sm" [class.ml-auto]="isMe(msg)">
+        <div *ngFor="let msg of messages()" class="flex flex-col max-w-[90%] text-sm" [class.ml-auto]="isMe(msg)" [class.items-end]="isMe(msg)">
           <div class="flex items-center gap-2 mb-1.5" [class.flex-row-reverse]="isMe(msg)">
             <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{{ msg.sender }}</span>
             <span *ngIf="msg.role === 'DOCTOR'" class="text-[8px] font-bold bg-teal-500/20 text-teal-400 px-1.5 py-0.5 rounded border border-teal-500/20">DOC</span>
+            <span *ngIf="msg.role === 'PARTICIPANT'" class="text-[8px] font-bold bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20">PART</span>
           </div>
           <div (click)="setReply(msg)" class="group cursor-pointer rounded-2xl px-4 py-2.5 relative border"
                [ngClass]="{
@@ -229,7 +328,6 @@ interface ChatMessage {
   `]
 })
 export class VirtualRoomComponent implements OnInit, OnDestroy {
-  constructor() { console.log('--- ENTERPRISE ROOM READY ---'); }
   @ViewChild('mainVideo') mainVideoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild('pipVideo')  pipVideoRef!:  ElementRef<HTMLVideoElement>;
   @ViewChild('chatContainer') chatContainer!: ElementRef<HTMLDivElement>;
@@ -239,6 +337,9 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
   cameraReady = signal(false); camError = signal(''); currentMsg = '';
   micEnabled = signal(true); videoEnabled = signal(true); screenSharing = signal(false);
   isRecording = signal(false); handRaised = signal(false); replyingTo = signal<ChatMessage | null>(null);
+  remoteStreams = signal<{peerId: string, stream: MediaStream}[]>([]);
+  pendingHandRaises = signal<{peerId: string, name: string}[]>([]);
+  speakerIds = signal<number[]>([]);
 
   // Transcription
   isTranscribing = signal(false);
@@ -251,7 +352,13 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
     { code: 'ar-SA', label: 'العربية' }
   ];
 
-  isHost = false; eventId: string | null = null; me: any = null;
+  isModerator = signal(false);
+  showInviteModal = signal(false);
+  doctorSearchQuery = '';
+  foundDoctors = signal<any[]>([]);
+  inviteStatus = signal<{msg: string, type: 'success' | 'error'} | null>(null);
+
+  isHost = false; eventId: string | null = null; me = signal<any>(null);
   private peer: any = null; 
   private localStream: MediaStream | null = null;
   private screenStream: MediaStream | null = null;
@@ -268,22 +375,87 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.eventId = this.route.snapshot.paramMap.get('id');
-    this.authFacade.currentUser$.subscribe(user => { if (user) { this.me = user; if (this.eventId) this.resolveRole(); } });
+    this.authFacade.currentUser$.subscribe(user => { if (user) { this.me.set(user); if (this.eventId) this.resolveRole(); } });
     this.initChat();
     this.initSpeech();
   }
-  ngOnDestroy() { this.cleanup(); }
+  ngOnDestroy() { 
+    this.cleanup(); 
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+  }
+
+  private beforeUnloadHandler = () => {
+    if (this.eventId && this.myPeerId()) {
+      if (this.isHost) this.eventService.unregisterHost(this.eventId, this.myPeerId()).subscribe();
+      else this.eventService.unregisterSpectator(this.eventId, this.myPeerId()).subscribe();
+    }
+  };
 
   private resolveRole() {
-    this.eventService.getActiveEvents().subscribe({
-      next: events => {
-        const ev = events.find(e => e.id === Number(this.eventId));
+    if (!this.eventId) return;
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
+
+    this.eventService.getEventById(Number(this.eventId)).subscribe({
+      next: ev => {
         if (ev) {
           this.eventTitle.set(ev.title);
-          const u = this.me;
-          this.isHost = (u?.email?.toLowerCase() === (ev as any).organizerEmail?.toLowerCase()) || (u?.id == ev.organizerId);
+          const u = this.me();
+          const isOrganizer = (u?.email?.toLowerCase() === (ev as any).organizerEmail?.toLowerCase()) || (u?.id == ev.organizerId);
+          const isSpeaker = ev.speakers?.some(s => s.id == u?.id || s.email?.toLowerCase() === u?.email?.toLowerCase());
+          
+          // Track all official speaker/organizer IDs
+          const ids = (ev.speakers || []).map(s => s.id).filter((id): id is number => !!id);
+          if (ev.organizerId) ids.push(ev.organizerId);
+          this.speakerIds.set(Array.from(new Set(ids)));
+
+          this.isModerator.set(isOrganizer);
+          this.isHost = !!(isOrganizer || isSpeaker);
+          console.log('[ROOM] Role resolved:', this.isHost ? 'HOST' : 'SPECTATOR');
+
+          // Persistance: Check if event is already live
+          this.eventService.getSignal(this.eventId!).subscribe(sig => {
+             if (sig.hosts && sig.hosts.length > 0) {
+                console.log('[ROOM] Conference is already LIVE, auto-rejoining...');
+                this.streamActive.set(true);
+                if (this.isHost) {
+                   this.startHostCamera().then(() => this.startDiffusion());
+                }
+             }
+          });
         }
-        this.startParticipantPolling(); this.loadPeerJS();
+        this.startParticipantPolling(); 
+        this.loadPeerJS();
+      },
+      error: () => {
+        console.error('[ROOM] Failed to fetch event details');
+        this.loadPeerJS(); // Try anyway
+      }
+    });
+  }
+
+  // --- INVITATION LOGIC ---
+  searchDoctors() {
+    if (this.doctorSearchQuery.length < 2) {
+      this.foundDoctors.set([]);
+      return;
+    }
+    this.eventService.searchDoctors(this.doctorSearchQuery).subscribe({
+      next: (res) => {
+        this.foundDoctors.set(res.content || []);
+      }
+    });
+  }
+
+  inviteDoctor(docId: number) {
+    if (!this.eventId) return;
+    this.eventService.addSpeaker(Number(this.eventId), docId).subscribe({
+      next: () => {
+        this.inviteStatus.set({ msg: 'Docteur ajouté en tant que présentateur !', type: 'success' });
+        setTimeout(() => this.inviteStatus.set(null), 3000);
+      },
+      error: (err) => {
+        this.inviteStatus.set({ msg: 'Erreur: ' + (err.error?.message || 'Inconnu'), type: 'error' });
+        setTimeout(() => this.inviteStatus.set(null), 3000);
       }
     });
   }
@@ -358,6 +530,26 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
      }
   }
 
+  private dummyCanvas: HTMLCanvasElement | null = null;
+  private dummyStream: MediaStream | null = null;
+  private getDummyStream(): MediaStream {
+    if (!this.dummyStream) {
+      this.dummyCanvas = document.createElement('canvas'); 
+      this.dummyCanvas.width = 1; this.dummyCanvas.height = 1;
+      // Draw something so it's not completely empty
+      const ctx = this.dummyCanvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, 1, 1);
+        setInterval(() => {
+          ctx.fillStyle = Math.random() > 0.5 ? '#000000' : '#000001';
+          ctx.fillRect(0, 0, 1, 1);
+        }, 1000);
+      }
+      this.dummyStream = (this.dummyCanvas as any).captureStream(1);
+    }
+    return this.dummyStream!;
+  }
+
   private stopScreenShare() {
     this.screenSharing.set(false);
     if (this.screenStream) { this.screenStream.getTracks().forEach(t => t.stop()); this.screenStream = null; }
@@ -380,7 +572,160 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
 
   simulateRecording() { this.isRecording.set(!this.isRecording()); }
   toggleFullscreen() { const e = this.mainVideoRef?.nativeElement; if (e?.requestFullscreen) e.requestFullscreen(); }
-  raiseHand() { this.handRaised.set(!this.handRaised()); this.sendChatInternal(this.handRaised() ? '✋ A levé la main' : '🤚 A baissé la main', true); }
+  
+  // --- HAND RAISE LOGIC ---
+  raiseHand() {
+    if (!this.eventId || !this.myPeerId()) return;
+    const user = this.me();
+    const name = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Anonyme';
+    
+    if (!this.handRaised()) {
+      // 1. Register in persistent backend state
+      this.eventService.requestToSpeak(this.eventId, this.myPeerId(), name).subscribe({
+        next: () => {
+          this.handRaised.set(true);
+          // 2. Send instant WebSocket notification for those already in room
+          const payload = JSON.stringify({ type: 'RAISE_HAND', peerId: this.myPeerId(), name });
+          this.sendChatInternal(`[ACTION]${payload}`, true);
+          this.sendChatInternal('✋ A demandé la parole', true);
+        }
+      });
+    } else {
+      this.handRaised.set(false);
+      const payload = JSON.stringify({ type: 'LOWER_HAND', peerId: this.myPeerId() });
+      this.sendChatInternal(`[ACTION]${payload}`, true);
+      this.sendChatInternal('🤚 A baissé la main', true);
+    }
+  }
+
+  acceptHand(peerId: string) {
+    if (!this.eventId) return;
+    this.eventService.handleHandRaise(this.eventId, peerId, 'ACCEPT').subscribe({
+      next: () => {
+        // Notify via WebSocket for immediate action
+        const payload = JSON.stringify({ type: 'PROMOTED', peerId });
+        this.sendChatInternal(`[ACTION]${payload}`, true);
+        this.pendingHandRaises.update(old => old.filter(p => p.peerId !== peerId));
+      }
+    });
+  }
+
+  rejectHand(peerId: string) {
+    if (!this.eventId) return;
+    this.eventService.handleHandRaise(this.eventId, peerId, 'REJECT').subscribe({
+      next: () => {
+        const payload = JSON.stringify({ type: 'REJECT_HAND', peerId });
+        this.sendChatInternal(`[ACTION]${payload}`, true);
+        this.pendingHandRaises.update(old => old.filter(p => p.peerId !== peerId));
+      }
+    });
+  }
+
+  isPermanentSpeaker(peerId: string): boolean {
+    try {
+      const userId = Number(peerId.split('_')[0]);
+      return this.speakerIds().includes(userId);
+    } catch (e) { return false; }
+  }
+
+  excludeParticipant(peerId: string) {
+     if (this.isPermanentSpeaker(peerId)) return; // Protection
+     if (confirm('Voulez-vous vraiment exclure cet intervenant ?')) {
+        const payload = JSON.stringify({ type: 'EXCLUDE_HAND', peerId });
+        this.sendChatInternal(`[ACTION]${payload}`, true);
+     }
+  }
+
+  private promoteToHost() {
+    this.handRaised.set(false);
+    this.isHost = true;
+    console.log('[PEERJS] Promoted to HOST!');
+    this.camError.set('Demande acceptée ! Passage en mode présentateur...');
+    setTimeout(() => this.camError.set(''), 4000);
+    
+    this.eventService.unregisterSpectator(this.eventId!, this.myPeerId()!).subscribe({
+       next: () => {
+          this.startHostCamera().then(() => {
+             this.startDiffusion();
+             this.sendChatInternal('🎥 A rejoint en tant que présentateur', true);
+          });
+       }
+    });
+  }
+
+  private demoteToSpectator() {
+    if (this.isModerator()) return; // Protection: Moderator cannot be demoted
+    
+    this.isHost = false;
+    this.streamActive.set(false);
+    this.cameraReady.set(false);
+    this.camError.set('Vous avez été replacé en spectateur.');
+    setTimeout(() => this.camError.set(''), 4000);
+    
+    if (this.localStream) { this.localStream.getTracks().forEach(t => t.stop()); this.localStream = null; }
+    if (this.screenStream) { this.screenStream.getTracks().forEach(t => t.stop()); this.screenStream = null; }
+    this.screenSharing.set(false);
+    
+    this.eventService.unregisterHost(this.eventId!, this.myPeerId()!).subscribe();
+    this.eventService.registerSpectator(this.eventId!, this.myPeerId()!).subscribe();
+    
+    this.activeConnections.forEach(c => c.close());
+    this.activeConnections.clear();
+    this.calledPeers.clear();
+    this.remoteStreams.set([]);
+    
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.sendChatInternal('🚶 Est redevenu simple participant', true);
+  }
+
+  private handleActionMessage(m: ChatMessage) {
+    try {
+       const actionData = JSON.parse(m.content.substring(8));
+       if (actionData.type === 'RAISE_HAND') {
+         if (this.isHost && actionData.peerId !== this.myPeerId()) {
+            this.pendingHandRaises.update(old => {
+               if (!old.find(p => p.peerId === actionData.peerId)) return [...old, { peerId: actionData.peerId, name: actionData.name }];
+               return old;
+            });
+         }
+       } else if (actionData.type === 'PROMOTED' && actionData.peerId === this.myPeerId()) {
+         this.promoteToHost();
+       } else if (actionData.type === 'LOWER_HAND') {
+         this.pendingHandRaises.update(old => old.filter(p => p.peerId !== actionData.peerId));
+       } else if (actionData.type === 'REJECT_HAND' && actionData.peerId === this.myPeerId()) {
+         this.handRaised.set(false);
+         this.camError.set('Demande refusée.');
+         setTimeout(() => this.camError.set(''), 4000);
+       } else if (actionData.type === 'EXCLUDE_HAND') {
+         if (actionData.peerId === this.myPeerId()) {
+            if (this.isModerator()) {
+               console.warn('[ROOM] Attempted to exclude moderator - IGNORED');
+               return;
+            }
+            this.demoteToSpectator();
+         } else {
+           // Clean up the excluded peer's video locally
+           const connToClose = Array.from(this.activeConnections).find((c: any) => c.peer === actionData.peerId);
+           if (connToClose) { (connToClose as any).close(); this.activeConnections.delete(connToClose); }
+           this.calledPeers.delete(actionData.peerId);
+           this.remoteStreams.update(old => old.filter(rs => rs.peerId !== actionData.peerId));
+         }
+       } else if (actionData.type === 'END_SESSION') {
+         this.camError.set('La conférence a été terminée par l\'organisateur.');
+         setTimeout(() => {
+            this.cleanup();
+            this.router.navigate(['/']);
+         }, 3000);
+       } else if (actionData.type === 'START_SESSION') {
+         console.log('[ROOM] Moderator started the session. Syncing...');
+         if (this.isHost && !this.streamActive()) {
+            this.startHostCamera().then(() => this.startDiffusion());
+         } else {
+            this.streamActive.set(true);
+         }
+       }
+    } catch(e) {}
+  }
 
   private initChat() {
     const s = new SockJS(`${environment.apiUrl}/ws-mediconnect`);
@@ -392,6 +737,8 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
           if (m.content.startsWith('[CC]')) {
             this.currentTranscription.set(m.content.replace('[CC] ', ''));
             setTimeout(() => this.currentTranscription.set(''), 4000);
+          } else if (m.content.startsWith('[ACTION]')) {
+            this.handleActionMessage(m);
           } else {
             this.messages.update(old => [...old, m]); 
             this.scrollToBottom(); 
@@ -404,12 +751,23 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
 
   sendChat() { if (!this.currentMsg.trim() || !this.stompClient?.connected) return; this.sendChatInternal(this.currentMsg); this.currentMsg = ''; this.replyingTo.set(null); }
   private sendChatInternal(c: string, sys = false) {
-    const n = `${this.me?.firstName || ''} ${this.me?.lastName || ''}`.trim() || 'Anonyme';
-    const m: ChatMessage = { sender: n, content: c, role: this.isHost ? 'DOCTOR' : 'PATIENT', timestamp: new Date().toISOString() };
+    const user = this.me();
+    const n = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Anonyme';
+    const m: ChatMessage = { 
+      senderId: user?.id,
+      sender: n, 
+      content: c, 
+      role: this.isHost ? 'DOCTOR' : 'PARTICIPANT', 
+      timestamp: new Date().toISOString() 
+    };
     if (!sys && this.replyingTo()) { m.replyTo = this.replyingTo()?.content; m.replyToSender = this.replyingTo()?.sender; }
     this.stompClient?.publish({ destination: `/app/chat/${this.eventId}/send`, body: JSON.stringify(m) });
   }
-  isMe(msg: ChatMessage) { return msg.sender === `${this.me?.firstName || ''} ${this.me?.lastName || ''}`.trim(); }
+  isMe(msg: ChatMessage) { 
+    const user = this.me();
+    // Strict comparison by ID only to support test accounts with same names
+    return !!(msg.senderId && user?.id && msg.senderId === user.id);
+  }
   private scrollToBottom() { setTimeout(() => { if (this.chatContainer) this.chatContainer.nativeElement.scrollTop = this.chatContainer.nativeElement.scrollHeight; }, 100); }
   setReply(m: ChatMessage) { this.replyingTo.set(m); }
 
@@ -419,7 +777,16 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
     s.onload = () => this.initPeer(); document.head.appendChild(s);
   }
   private initPeer() {
-    this.peer = new Peer(undefined, { debug: 0 });
+    // Use sessionStorage to keep the same PeerID for this tab across refreshes
+    let tabId = sessionStorage.getItem('medievent_tab_id');
+    if (!tabId) {
+      tabId = Math.random().toString(36).substring(7);
+      sessionStorage.setItem('medievent_tab_id', tabId);
+    }
+    
+    const customId = (this.me()?.id || 'anon') + "_" + this.eventId + "_" + tabId;
+    console.log('[PEERJS] Initializing with ID:', customId);
+    this.peer = new Peer(customId);
     this.peer.on('open', (id: string) => this.zone.run(() => {
       console.log('[PEERJS] Opened with ID:', id);
       this.myPeerId.set(id);
@@ -429,49 +796,79 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
       } else {
         console.log('[PEERJS] User is SPECTATOR, registering...');
         this.eventService.registerSpectator(this.eventId!, id).subscribe({
-            next: () => console.log('[PEERJS] Spectator registered successfully'),
-            error: err => console.error('[PEERJS] Spectator registration failed:', err)
+           next: (res) => console.log('[PEERJS] Spectator registered. Host live:', res.hostIsLive),
+           error: (err) => console.error('[PEERJS] Registration failed:', err)
         });
       }
     }));
     this.peer.on('error', (err: any) => console.error('[PEERJS] Global Peer Error:', err));
     this.peer.on('call', (c: any) => this.zone.run(() => { 
-      c.answer(); 
+      console.log('[PEERJS] Incoming call from:', c.peer);
+      c.answer(this.localStream || this.getDummyStream());
+      
       this.activeConnections.add(c);
+      this.calledPeers.add(c.peer);
+
       c.on('stream', (s: MediaStream) => this.zone.run(() => { 
-        this.streamActive.set(true);
-        setTimeout(() => {
-          if (this.mainVideoRef?.nativeElement) {
-            this.mainVideoRef.nativeElement.srcObject = s;
-            this.mainVideoRef.nativeElement.play().catch(() => {});
+        if (!s) return;
+        console.log('[PEERJS] Stream received from:', c.peer);
+        
+        this.eventService.getSignal(this.eventId!).subscribe(sig => {
+          const hosts = sig.hosts || [];
+          if (hosts.includes(c.peer)) {
+             const myUid = this.me()?.id;
+             if (myUid && c.peer.startsWith(myUid + '_')) {
+               console.log('[PEERJS] Skipping self-stream from another tab');
+               return;
+             }
+             this.streamActive.set(true);
+             this.remoteStreams.update(old => {
+               if (old.some(rs => rs.peerId === c.peer)) return old;
+               return [...old, { peerId: c.peer, stream: s }];
+             });
           }
-        }, 200);
+        });
       })); 
-      c.on('close', () => this.activeConnections.delete(c));
+      c.on('close', () => this.zone.run(() => {
+        this.activeConnections.delete(c);
+        this.calledPeers.delete(c.peer);
+        this.remoteStreams.update(old => old.filter(rs => rs.peerId !== c.peer));
+      }));
     }));
   }
+
+  private mockCanvas: HTMLCanvasElement | null = null;
+
   private async startHostCamera() { 
     try { 
       this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); 
       this.cameraReady.set(true); 
-      this.localStream.getTracks().forEach(t => this.broadcastStream.addTrack(t));
     } catch (e: any) { 
       this.camError.set('Caméra indisponible - Mode Simulation'); 
       this.localStream = this.createMockStream();
       this.cameraReady.set(true);
-      this.localStream.getTracks().forEach(t => this.broadcastStream.addTrack(t));
     } 
   }
 
   private createMockStream(): MediaStream {
-    const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 480;
-    const ctx = canvas.getContext('2d');
+    this.mockCanvas = document.createElement('canvas'); 
+    this.mockCanvas.width = 640; this.mockCanvas.height = 480;
+    const ctx = this.mockCanvas.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = '#0d9488'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#ffffff'; ctx.font = '30px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('Caméra Indisponible', canvas.width / 2, canvas.height / 2);
+      const draw = () => {
+        if (!this.mockCanvas) return;
+        ctx.fillStyle = '#0d9488'; ctx.fillRect(0, 0, this.mockCanvas.width, this.mockCanvas.height);
+        ctx.fillStyle = '#ffffff'; ctx.font = '30px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Caméra Indisponible', this.mockCanvas.width / 2, this.mockCanvas.height / 2);
+        // Small moving indicator to force frames
+        const time = new Date().getTime();
+        ctx.fillStyle = (time % 1000 < 500) ? '#ffffff' : '#0d9488';
+        ctx.beginPath(); ctx.arc(this.mockCanvas.width / 2, this.mockCanvas.height / 2 + 50, 10, 0, Math.PI * 2); ctx.fill();
+      };
+      draw();
+      setInterval(draw, 100); // 10 FPS is enough to keep the WebRTC track alive
     }
-    const canvasStream = (canvas as any).captureStream(15);
+    const canvasStream = (this.mockCanvas as any).captureStream(15);
     return canvasStream;
   }
   
@@ -480,11 +877,24 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
     this.eventService.registerHost(this.eventId, this.myPeerId()).subscribe({
       next: () => {
         this.zone.run(() => {
+          // Fresh start for connections when going live
+          this.activeConnections.forEach(c => c.close());
+          this.activeConnections.clear();
+          this.calledPeers.clear();
+          
           this.streamActive.set(true);
           setTimeout(() => {
-            if (this.mainVideoRef?.nativeElement) { this.mainVideoRef.nativeElement.srcObject = this.localStream; this.mainVideoRef.nativeElement.play().catch(() => {}); }
-            if (this.pipVideoRef?.nativeElement) { this.pipVideoRef.nativeElement.srcObject = this.localStream; this.pipVideoRef.nativeElement.play().catch(() => {}); }
-          }, 200);
+            if (this.mainVideoRef?.nativeElement && this.localStream) { 
+              this.mainVideoRef.nativeElement.srcObject = this.localStream; 
+              this.mainVideoRef.nativeElement.play().catch(err => console.warn('[VIDEO] Play error:', err)); 
+            }
+          }, 500);
+
+          if (this.isModerator()) {
+            const payload = JSON.stringify({ type: 'START_SESSION' });
+            this.sendChatInternal(`[ACTION]${payload}`, true);
+          }
+
           this.triggerBroadcast();
           this.startPollingSpectators();
         });
@@ -492,32 +902,82 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
     });
   }
 
-  private startPollingSpectators() { this.pollTimer = setInterval(() => this.triggerBroadcast(), 4000); }
+  private startPollingSpectators() { 
+    this.pollTimer = setInterval(() => {
+      if (this.isHost && this.streamActive()) {
+        // Heartbeat for host
+        this.eventService.registerHost(this.eventId!, this.myPeerId()).subscribe();
+        this.triggerBroadcast();
+      }
+    }, 4000); 
+  }
+
   private triggerBroadcast() {
-    this.eventService.getSpectators(this.eventId!).subscribe(d => { 
-      const spectators = (d.spectators || []) as string[];
-      spectators.forEach(sid => { 
-        if (!this.calledPeers.has(sid)) { 
-          this.calledPeers.add(sid); 
-          const call = this.peer.call(sid, this.broadcastStream); 
-          if (call) {
-            this.activeConnections.add(call);
-            call.on('close', () => { this.activeConnections.delete(call); this.calledPeers.delete(sid); });
+    if (!this.eventId) return;
+    this.eventService.getSpectators(this.eventId).subscribe(d => {
+      this.eventService.getSignal(this.eventId!).subscribe(sig => {
+        const spectators = (d.spectators || []) as string[];
+        const hosts = (sig.hosts || []) as string[];
+        const peers = [...spectators, ...hosts];
+        
+        peers.forEach(sid => {
+          if (sid !== this.myPeerId() && !this.calledPeers.has(sid)) {
+
+            console.log('[PEERJS] Host calling peer:', sid);
+            this.calledPeers.add(sid);
+            const call = this.peer.call(sid, this.localStream || this.getDummyStream());
+            if (call) {
+              this.activeConnections.add(call);
+              call.on('stream', (s: MediaStream) => this.zone.run(() => {
+                console.log('[PEERJS] Stream received from called peer:', sid);
+                if (hosts.includes(sid)) {
+                   const myUid = this.me()?.id;
+                   if (myUid && sid.startsWith(myUid + '_')) return; // Skip self
+                   this.streamActive.set(true);
+                   this.remoteStreams.update(old => {
+                    const exists = old.find(rs => rs.peerId === sid);
+                    if (exists) return old;
+                    return [...old, { peerId: sid, stream: s }];
+                  });
+                }
+              }));
+              call.on('close', () => { this.activeConnections.delete(call); this.calledPeers.delete(sid); });
+            }
           }
-        } 
-      }); 
+        });
+      });
     });
   }
-  private startParticipantPolling() { this.participantPollTimer = setInterval(() => { if (this.eventId) this.eventService.getEventParticipants(Number(this.eventId)).subscribe(l => this.participants.set(l)); }, 8000); }
+
+  private startParticipantPolling() { 
+    this.participantPollTimer = setInterval(() => { 
+      if (this.eventId) {
+        if (!this.isHost && this.myPeerId()) {
+          this.eventService.registerSpectator(this.eventId, this.myPeerId()).subscribe();
+        }
+        this.eventService.getEventParticipants(Number(this.eventId)).subscribe(l => this.participants.set(l)); 
+        
+        if (this.isModerator()) {
+          this.eventService.getPendingHandRaises(this.eventId).subscribe(res => this.pendingHandRaises.set(res));
+        }
+      }
+    }, 8000); 
+  }
+
   leave() { 
+    if (this.isHost && this.eventId && this.myPeerId()) this.eventService.unregisterHost(this.eventId, this.myPeerId()).subscribe();
     if (!this.isHost && this.eventId && this.myPeerId()) this.eventService.unregisterSpectator(this.eventId, this.myPeerId()).subscribe(); 
     this.cleanup(); 
     this.router.navigate([this.isHost ? '/doctor/events/my' : '/events']); 
   }
   endSession() { 
-    if (this.eventId) this.eventService.unregisterHost(this.eventId).subscribe(); 
-    this.cleanup(); 
-    this.router.navigate(['/doctor/events/my']); 
+    if (confirm('Voulez-vous vraiment terminer la conférence pour tous les participants ?')) {
+       const payload = JSON.stringify({ type: 'END_SESSION' });
+       this.sendChatInternal(`[ACTION]${payload}`, true);
+       if (this.eventId && this.myPeerId()) this.eventService.unregisterHost(this.eventId, this.myPeerId()).subscribe(); 
+       this.cleanup(); 
+       this.router.navigate(['/']); 
+    }
   }
   private cleanup() { clearInterval(this.pollTimer); clearInterval(this.participantPollTimer); this.localStream?.getTracks().forEach(t => t.stop()); this.screenStream?.getTracks().forEach(t => t.stop()); this.peer?.destroy(); this.stompClient?.deactivate(); if (this.recognition) this.recognition.stop(); }
 }
