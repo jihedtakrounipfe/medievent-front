@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export type EventAudience = 'DOCTORS_ONLY' | 'PUBLIC';
-export type EventStatus   = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type EventStatus   = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
 export type ParticipantRole = 'PARTICIPANT' | 'GUEST';
 export type ParticipantStatus = 'CONFIRMED' | 'PENDING_INVITE' | 'DECLINED' | 'WAITING_LIST';
 
@@ -37,6 +37,7 @@ export interface MedicalEvent {
   maxParticipants?: number;
   confirmedCount?: number;
   waitingListCount?: number;
+  finalParticipantCount?: number;
   speakers?: {
     id: number;
     fullName: string;
@@ -139,6 +140,17 @@ export class EventService {
 
   addSpeaker(eventId: number, doctorId: number): Observable<MedicalEvent> {
     return this.http.post<MedicalEvent>(`${this.API}/doctor/events/${eventId}/speakers/${doctorId}`, {});
+  }
+
+  completeEvent(eventId: number, participantCount?: number): Observable<any> {
+    let params = {};
+    if (participantCount !== undefined) {
+      params = { participantCount: participantCount.toString() };
+    }
+    return this.http.post(`${this.API}/doctor/events/${eventId}/complete`, {}, { 
+      params, 
+      responseType: 'text' as 'json' 
+    });
   }
 
   // ─── Signaling (WebRTC) ──────────────────────────────────────────────────

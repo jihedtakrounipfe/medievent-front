@@ -156,7 +156,7 @@ import * as QRCode from 'qrcode';
                       <div *ngIf="participationStatus() === 'CONFIRMED'" class="space-y-3">
                          <div class="w-full py-4 px-6 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-2xl border border-emerald-100 flex items-center justify-center gap-2">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-                            INSCRIPTION CONFIRMÉE
+                            PARTICIPATION CONFIRMÉE
                          </div>
                          <button (click)="openTicket()" 
                                  class="w-full py-4 px-6 bg-gray-900 text-white text-xs font-bold rounded-2xl shadow-xl shadow-gray-400/20 transition-all active:scale-[0.98] uppercase tracking-widest flex items-center justify-center gap-2 no-print">
@@ -184,15 +184,25 @@ import * as QRCode from 'qrcode';
                       </div>
                    </ng-container>
 
+                   <!-- Finished Event -->
+                    <div *ngIf="event()?.status === 'COMPLETED'" class="w-full py-4 px-6 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-2xl border border-emerald-100 flex items-center justify-center gap-2 uppercase tracking-widest">
+                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                       ÉVÉNEMENT TERMINÉ
+                    </div>
+                    <div *ngIf="isFinished() && event()?.status !== 'COMPLETED'" class="w-full py-4 px-6 bg-gray-100 text-gray-400 text-[10px] font-black rounded-2xl border border-gray-200 flex items-center justify-center gap-2 uppercase tracking-widest">
+                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                       ÉVÉNEMENT EXPIRÉ
+                    </div>
+
                    <!-- Online Event Status (When not yet time to join) -->
-                   <div *ngIf="isOnline(event()) && !canEnterRoom()" class="w-full py-4 px-6 bg-blue-50 text-blue-700 text-[10px] font-black rounded-2xl border border-blue-100 flex items-center justify-center gap-2 uppercase tracking-widest">
-                      <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                      Accès Virtuel Libre
+                   <div *ngIf="isOnline(event()) && !canEnterRoom() && !isFinished()" class="w-full py-4 px-6 bg-amber-50 text-amber-700 text-[10px] font-black rounded-2xl border border-amber-100 flex items-center justify-center gap-2 uppercase tracking-widest">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      SALLE FERMÉE - ACCÈS DÈS 15 MN AVANT
                    </div>
                  </div>
 
                  <!-- Live Access -->
-                 <div *ngIf="isOrganizer(event()) || (canEnterRoom() && isOnline(event()))">
+                 <div *ngIf="!isFinished() && (isOrganizer(event()) || (canEnterRoom() && isOnline(event())))">
                     <a *ngIf="isOnline(event())" [routerLink]="['/events', event()?.id, 'room']"
                        class="w-full flex justify-center items-center py-4 px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-indigo-900/20 transition-all uppercase tracking-widest">
                        ENTRER DANS LA SALLE
@@ -490,13 +500,35 @@ export class EventDetailComponent implements OnInit {
   canEnterRoom(): boolean {
     const ev = this.event();
     if (!ev || !ev.eventDate) return false;
-    if (this.isOrganizer(ev)) return true; // Organizers can always access
-    if (ev.targetAudience === 'PUBLIC' && this.isOnline(ev)) return true;
-    if (this.participationStatus() === 'CONFIRMED') return true;
+    if (ev.status === 'COMPLETED') return false;
+
     const now = new Date();
     const eventTime = new Date(ev.eventDate);
     const diff = (eventTime.getTime() - now.getTime()) / (1000 * 60);
-    return diff <= 60 && diff >= -480;
+    
+    // Check if we are within the allowed time window (15 mins before to 8 hours after)
+    const timeOk = diff <= 15 && diff >= -480;
+
+    // Organizers can always enter to prepare the room
+    if (this.isOrganizer(ev)) return true;
+
+    // For others, they must be confirmed/public AND within the time window
+    if (!timeOk) return false;
+
+    if (ev.targetAudience === 'PUBLIC' && this.isOnline(ev)) return true;
+    if (this.participationStatus() === 'CONFIRMED') return true;
+
+    return false;
+  }
+
+  isFinished(): boolean {
+    const ev = this.event();
+    if (!ev || !ev.eventDate) return false;
+    if (ev.status === 'COMPLETED') return true;
+    const now = new Date();
+    const eventTime = new Date(ev.eventDate);
+    const diff = (eventTime.getTime() - now.getTime()) / (1000 * 60);
+    return diff < -480; // Event finished after 8 hours
   }
 
   join() {

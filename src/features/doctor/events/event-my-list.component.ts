@@ -104,9 +104,9 @@ import { Router, RouterModule } from '@angular/router';
           </p>
 
           <div class="pt-4 border-t border-gray-100 flex items-center justify-between mt-auto">
-            <div class="flex items-center text-sm">
-               <span class="font-bold text-gray-900 mr-1">{{ ev.confirmedCount || 0 }}</span>
-               <span class="text-gray-500">inscrits</span>
+            <div *ngIf="ev.status === 'COMPLETED' || canJoinRoom(ev)" class="flex items-center text-sm">
+               <span class="font-bold text-gray-900 mr-1">{{ ev.status === 'COMPLETED' ? ev.finalParticipantCount || 0 : ev.confirmedCount || 0 }}</span>
+               <span class="text-gray-500">participants</span>
             </div>
             
             <div class="flex gap-2">
@@ -118,11 +118,20 @@ import { Router, RouterModule } from '@angular/router';
                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                 Inviter
               </button>
-              <button *ngIf="canJoinRoom(ev)" [routerLink]="['/events', ev.id, 'room']" (click)="$event.stopPropagation()" 
+              <button *ngIf="canJoinRoom(ev) && !isFinished(ev)" [routerLink]="['/events', ev.id, 'room']" (click)="$event.stopPropagation()" 
                       class="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 group/btn">
                  <span class="w-1.5 h-1.5 rounded-full bg-red-600 group-hover/btn:bg-white animate-pulse"></span>
                  Live
               </button>
+              <div *ngIf="isOnline(ev) && !canJoinRoom(ev) && !isFinished(ev)" class="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-bold flex items-center gap-1">
+                 Bientôt
+              </div>
+              <div *ngIf="ev.status === 'COMPLETED'" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                 Terminée
+              </div>
+              <div *ngIf="isFinished(ev) && ev.status !== 'COMPLETED'" class="px-3 py-1.5 bg-gray-50 text-gray-400 border border-gray-200 rounded-lg text-xs font-bold flex items-center gap-1.5" title="La conférence n'a pas été lancée dans les temps">
+                 Expirée
+              </div>
             </div>
           </div>
         </div>
@@ -184,7 +193,7 @@ import { Router, RouterModule } from '@angular/router';
              </div>
              <div class="flex items-center gap-3">
                 <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-700 border border-green-100">
-                   {{ p.role === 'GUEST' ? 'INVITÉ' : 'INSCRIT' }}
+                   {{ p.role === 'GUEST' ? 'INVITÉ' : 'PARTICIPANT' }}
                 </span>
              </div>
           </div>
@@ -340,11 +349,20 @@ export class EventMyListComponent implements OnInit {
 
   canJoinRoom(ev: MedicalEvent): boolean {
     if (!this.isOnline(ev)) return false;
+    if (ev.status === 'COMPLETED') return false;
     const now = new Date();
     const eventTime = new Date(ev.eventDate);
     const diff = (eventTime.getTime() - now.getTime()) / (1000 * 60);
-    // Allow starting 60 min before and up to 8 hours after
-    return diff <= 60 && diff >= -480;
+    // Allow starting 15 min before and up to 8 hours after
+    return diff <= 15 && diff >= -480;
+  }
+
+  isFinished(ev: MedicalEvent): boolean {
+    if (ev.status === 'COMPLETED') return true;
+    const now = new Date();
+    const eventTime = new Date(ev.eventDate);
+    const diff = (eventTime.getTime() - now.getTime()) / (1000 * 60);
+    return diff < -480;
   }
 
   formatLabel(s: string): string {

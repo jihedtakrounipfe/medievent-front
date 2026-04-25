@@ -52,7 +52,7 @@ interface ChatMessage {
     <div class="flex items-center gap-6" *ngIf="streamActive()">
       <div class="flex items-center gap-2 text-xs font-medium text-gray-400">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        {{ participants().length }} Inscrits
+        {{ liveSpectatorCount() }} Participants
       </div>
     </div>
 
@@ -159,8 +159,8 @@ interface ChatMessage {
             </div>
             
             <div class="mt-6 pt-6 border-t border-gray-800 flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-widest">
-               <span>Auditeurs en attente</span>
-               <span class="text-white bg-gray-800 px-2.5 py-0.5 rounded-md">{{ participants().length }}</span>
+               <span>Participants en ligne</span>
+               <span class="text-white bg-gray-800 px-2.5 py-0.5 rounded-md">{{ liveSpectatorCount() }}</span>
             </div>
           </div>
         </div>
@@ -334,6 +334,7 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
 
   eventTitle = signal(''); streamActive = signal(false); myPeerId = signal('');
   participants = signal<Participant[]>([]); messages = signal<ChatMessage[]>([]);
+  liveSpectatorCount = signal(0);
   cameraReady = signal(false); camError = signal(''); currentMsg = '';
   micEnabled = signal(true); videoEnabled = signal(true); screenSharing = signal(false);
   isRecording = signal(false); handRaised = signal(false); replyingTo = signal<ChatMessage | null>(null);
@@ -414,8 +415,9 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
 
           // Persistance: Check if event is already live
           this.eventService.getSignal(this.eventId!).subscribe(sig => {
-             if (sig.hosts && sig.hosts.length > 0) {
-                console.log('[ROOM] Conference is already LIVE, auto-rejoining...');
+             const wasActive = sessionStorage.getItem(`medievent_live_${this.eventId}`) === 'true';
+             if ((sig.hosts && sig.hosts.length > 0) || (this.isModerator() && wasActive)) {
+                console.log('[ROOM] Conference is already LIVE or auto-rejoining...');
                 this.streamActive.set(true);
                 if (this.isHost) {
                    this.startHostCamera().then(() => this.startDiffusion());
@@ -882,6 +884,9 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
           this.activeConnections.clear();
           this.calledPeers.clear();
           
+          if (this.isModerator()) {
+            sessionStorage.setItem(`medievent_live_${this.eventId}`, 'true');
+          }
           this.streamActive.set(true);
           setTimeout(() => {
             if (this.mainVideoRef?.nativeElement && this.localStream) { 
@@ -953,9 +958,17 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
     this.participantPollTimer = setInterval(() => { 
       if (this.eventId) {
         if (!this.isHost && this.myPeerId()) {
-          this.eventService.registerSpectator(this.eventId, this.myPeerId()).subscribe();
+          this.eventService.registerSpectator(this.eventId, this.myPeerId()).subscribe({
+            error: (err) => {
+               if (err.status === 403) {
+                  alert('La salle est pleine. Capacité maximale atteinte.');
+                  this.leave();
+               }
+            }
+          });
         }
         this.eventService.getEventParticipants(Number(this.eventId)).subscribe(l => this.participants.set(l)); 
+        this.eventService.getSpectators(this.eventId).subscribe(res => this.liveSpectatorCount.set(res.spectators?.length || 0));
         
         if (this.isModerator()) {
           this.eventService.getPendingHandRaises(this.eventId).subscribe(res => this.pendingHandRaises.set(res));
@@ -967,6 +980,7 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
   leave() { 
     if (this.isHost && this.eventId && this.myPeerId()) this.eventService.unregisterHost(this.eventId, this.myPeerId()).subscribe();
     if (!this.isHost && this.eventId && this.myPeerId()) this.eventService.unregisterSpectator(this.eventId, this.myPeerId()).subscribe(); 
+    if (this.eventId) sessionStorage.removeItem(`medievent_live_${this.eventId}`);
     this.cleanup(); 
     this.router.navigate([this.isHost ? '/doctor/events/my' : '/events']); 
   }
@@ -974,7 +988,11 @@ export class VirtualRoomComponent implements OnInit, OnDestroy {
     if (confirm('Voulez-vous vraiment terminer la conférence pour tous les participants ?')) {
        const payload = JSON.stringify({ type: 'END_SESSION' });
        this.sendChatInternal(`[ACTION]${payload}`, true);
-       if (this.eventId && this.myPeerId()) this.eventService.unregisterHost(this.eventId, this.myPeerId()).subscribe(); 
+       if (this.eventId && this.myPeerId()) {
+          this.eventService.unregisterHost(this.eventId, this.myPeerId()).subscribe(); 
+          this.eventService.completeEvent(Number(this.eventId), this.liveSpectatorCount()).subscribe();
+       }
+       if (this.eventId) sessionStorage.removeItem(`medievent_live_${this.eventId}`);
        this.cleanup(); 
        this.router.navigate(['/']); 
     }

@@ -87,7 +87,7 @@ import { Specialization } from '../../../core/user/enums/specialization.enum';
               <!-- Status Badges for authenticated users (Only for physical events) -->
               <div class="absolute bottom-4 left-4 z-[50]" *ngIf="getParticipationStatus(ev.id!) && !isOnline(ev)">
                  <span [class]="getBadgeClass(ev.id!)" class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm border">
-                    {{ getParticipationStatus(ev.id!) === 'CONFIRMED' ? '✓ Inscrit' : '⌛ En attente' }}
+                    {{ getParticipationStatus(ev.id!) === 'CONFIRMED' ? '✓ Participant' : '⌛ En attente' }}
                  </span>
               </div>
             </div>
@@ -99,9 +99,14 @@ import { Specialization } from '../../../core/user/enums/specialization.enum';
                  {{ ev.eventDate | date:'dd MMM à HH:mm' }}
               </div>
 
-              <h3 class="text-xl font-bold text-gray-900 mb-4 leading-snug group-hover:text-teal-600 transition-colors line-clamp-2">
+              <h3 class="text-xl font-bold text-gray-900 mb-2 leading-snug group-hover:text-teal-600 transition-colors line-clamp-2">
                 {{ ev.title }}
               </h3>
+              
+              <div *ngIf="ev.status === 'COMPLETED' || canJoinRoom(ev)" class="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-4">
+                 <svg class="w-3.5 h-3.5 mr-1 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                 {{ ev.status === 'COMPLETED' ? ev.finalParticipantCount || 0 : ev.confirmedCount || 0 }} participants
+              </div>
 
               <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -112,13 +117,22 @@ import { Specialization } from '../../../core/user/enums/specialization.enum';
                   </div>
                 </div>
                 <div class="flex items-center gap-3">
-                  <button *ngIf="canJoinRoom(ev)"
+                  <button *ngIf="canJoinRoom(ev) && !isFinished(ev)"
                           [routerLink]="['/events', ev.id, 'room']"
                           (click)="$event.stopPropagation()"
                           class="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 group/btn">
                      <span class="w-1.5 h-1.5 rounded-full bg-red-600 group-hover/btn:bg-white animate-pulse"></span>
                      Live
                   </button>
+                  <div *ngIf="isOnline(ev) && !canJoinRoom(ev) && !isFinished(ev)" class="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-bold flex items-center gap-1">
+                     Bientôt
+                  </div>
+                  <div *ngIf="ev.status === 'COMPLETED'" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                     Terminée
+                  </div>
+                  <div *ngIf="isFinished(ev) && ev.status !== 'COMPLETED'" class="px-3 py-1.5 bg-gray-50 text-gray-400 border border-gray-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                     Expirée
+                  </div>
                   <div class="w-8 h-8 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 group-hover:bg-teal-600 group-hover:border-teal-600 group-hover:text-white transition-all duration-300">
                     <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                   </div>
@@ -215,13 +229,23 @@ export class EventPublicListComponent implements OnInit {
 
   canJoinRoom(ev: MedicalEvent): boolean {
     if (!this.isOnline(ev)) return false;
+    if (ev.status === 'COMPLETED') return false;
     // Only confirmed participants can join
     if (this.getParticipationStatus(ev.id!) !== 'CONFIRMED') return false;
 
     const now = new Date();
     const eventTime = new Date(ev.eventDate);
     const diff = (eventTime.getTime() - now.getTime()) / (1000 * 60);
-    return diff <= 60 && diff >= -480;
+    // Allow starting 15 min before and up to 8 hours after
+    return diff <= 15 && diff >= -480;
+  }
+
+  isFinished(ev: MedicalEvent): boolean {
+    if (ev.status === 'COMPLETED') return true;
+    const now = new Date();
+    const eventTime = new Date(ev.eventDate);
+    const diff = (eventTime.getTime() - now.getTime()) / (1000 * 60);
+    return diff < -480;
   }
 
   isOnline(ev: MedicalEvent): boolean {
