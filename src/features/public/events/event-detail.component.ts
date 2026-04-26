@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { EventService, MedicalEvent, ParticipantStatus, Participant } from '../../../core/services/event.service';
 import { AuthFacade } from '../../../core/services/auth.facade';
+import { NotificationService } from '../../../core/services/notification.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { catchError, of, Subscription } from 'rxjs';
 import * as QRCode from 'qrcode';
@@ -143,6 +144,14 @@ import * as QRCode from 'qrcode';
               </div>
 
               <div class="mt-10 pt-10 border-t border-gray-100">
+                 <!-- Notifications (Mailing Feedback) -->
+                 <div *ngIf="notificationMsg()" class="mb-6 p-4 rounded-xl border flex items-start gap-3 text-xs font-bold transition-all animate-ticket"
+                      [ngClass]="notificationMsg()?.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'">
+                    <svg *ngIf="notificationMsg()?.type === 'success'" class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                    <svg *ngIf="notificationMsg()?.type === 'warning'" class="w-5 h-5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                    <span class="leading-relaxed">{{ notificationMsg()?.text }}</span>
+                 </div>
+
                  <!-- Action Buttons -->
                  <div *ngIf="!isOrganizer(event())" class="space-y-4">
                    
@@ -195,17 +204,33 @@ import * as QRCode from 'qrcode';
                     </div>
 
                    <!-- Online Event Status (When not yet time to join) -->
-                   <div *ngIf="isOnline(event()) && !canEnterRoom() && !isFinished()" class="w-full py-4 px-6 bg-amber-50 text-amber-700 text-[10px] font-black rounded-2xl border border-amber-100 flex items-center justify-center gap-2 uppercase tracking-widest">
+                   <div *ngIf="isOnline(event()) && event()?.status !== 'COMPLETED' && !canEnterRoom() && !isFinished()" class="w-full py-4 px-6 bg-amber-50 text-amber-700 text-[10px] font-black rounded-2xl border border-amber-100 flex items-center justify-center gap-2 uppercase tracking-widest">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       SALLE FERMÉE - ACCÈS DÈS 15 MN AVANT
                    </div>
+
+                   <!-- Subscribe Button (Online events, not yet started, not organizer) -->
+                   <ng-container *ngIf="isOnline(event()) && !isFinished() && !isOrganizer(event())">
+                     <button *ngIf="!subscribedToLive()" (click)="subscribeToLive()" 
+                             class="w-full flex items-center justify-center gap-2 py-3 px-6 bg-white border-2 border-indigo-200 text-indigo-600 text-xs font-bold rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 transition-all uppercase tracking-widest">
+                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                       ME NOTIFIER AU DÉMARRAGE
+                     </button>
+                     <button *ngIf="subscribedToLive()" (click)="unsubscribeFromLive()" 
+                             class="w-full flex items-center justify-center gap-2 py-3 px-6 bg-indigo-600 text-white text-xs font-bold rounded-2xl hover:bg-indigo-700 transition-all uppercase tracking-widest">
+                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                       NOTIF ACTIVÉE ✓
+                     </button>
+                   </ng-container>
                  </div>
 
                  <!-- Live Access -->
                  <div *ngIf="!isFinished() && (isOrganizer(event()) || (canEnterRoom() && isOnline(event())))">
                     <a *ngIf="isOnline(event())" [routerLink]="['/events', event()?.id, 'room']"
-                       class="w-full flex justify-center items-center py-4 px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-indigo-900/20 transition-all uppercase tracking-widest">
-                       ENTRER DANS LA SALLE
+                       [ngClass]="hostIsLive() ? 'bg-red-600 hover:bg-red-500 shadow-red-900/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20'"
+                       class="w-full flex justify-center items-center py-4 px-6 text-white text-xs font-bold rounded-2xl shadow-lg transition-all uppercase tracking-widest gap-2">
+                       <span *ngIf="hostIsLive()" class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                       {{ hostIsLive() ? 'LE DIRECT A COMMENCÉ - REJOINDRE' : 'ENTRER DANS LA SALLE' }}
                     </a>
                     <p *ngIf="isOrganizer(event()) && !isOnline(event())" class="text-center text-[10px] font-bold text-teal-600 uppercase tracking-widest">
                        Organisateur de la Session
@@ -361,11 +386,13 @@ export class EventDetailComponent implements OnInit {
   private eventService = inject(EventService);
   public authFacade    = inject(AuthFacade);
   private sanitizer    = inject(DomSanitizer);
+  private notifService = inject(NotificationService);
 
   event               = signal<MedicalEvent | null>(null);
   notFound            = signal(false);
   requestedId         = '';
   actionLoading       = signal(false);
+  notificationMsg     = signal<{text: string, type: 'success' | 'warning'} | null>(null);
   participationStatus = signal<ParticipantStatus | undefined>(undefined);
   waitlistRank        = signal<number | undefined>(undefined);
   participants        = signal<Participant[]>([]);
@@ -373,6 +400,11 @@ export class EventDetailComponent implements OnInit {
   showTicket          = signal(false);
   ticketQrCode        = signal('');
   
+  hostIsLive          = signal(false);
+  subscribedToLive    = signal(false);
+  private liveCheckInterval: any;
+  private liveNotifSent = false; // prevent duplicate notifications per session
+
   private map: any;
 
   ngOnInit() {
@@ -389,12 +421,78 @@ export class EventDetailComponent implements OnInit {
       next: (ev) => {
         this.notFound.set(false);
         this.event.set(ev);
+        if (ev.id) {
+          this.eventService.checkSubscriptionStatus(ev.id).subscribe(res => {
+            this.subscribedToLive.set(res.subscribed);
+          });
+        }
         this.checkParticipation();
         if (!this.isOnline(ev)) {
           setTimeout(() => this.initMap(), 500);
+        } else {
+          this.checkLiveStatus();
+          this.liveCheckInterval = setInterval(() => this.checkLiveStatus(), 5000);
         }
       },
       error: () => this.notFound.set(true)
+    });
+  }
+
+  private isFirstLiveCheck = true;
+
+  checkLiveStatus() {
+     const ev = this.event();
+     if (!ev?.id) return;
+     this.eventService.getSignal(ev.id.toString()).subscribe({
+        next: (res) => {
+          const wasLive = this.hostIsLive();
+          this.hostIsLive.set(res.isLive);
+
+          // Trigger in-app notification when live just started for subscribed users
+          // We only notify if it TRANSITIONS to live, not if it's already live when we enter
+          if (res.isLive && !wasLive && !this.isFirstLiveCheck && !this.liveNotifSent && this.subscribedToLive()) {
+            this.liveNotifSent = true;
+            this.notifService.push({
+              title: '🔴 Direct commencé !',
+              message: `"${ev.title}" est en direct maintenant. Cliquez pour rejoindre.`,
+              eventId: ev.id,
+              type: 'live_started'
+            });
+          }
+          this.isFirstLiveCheck = false;
+        },
+        error: () => {}
+     });
+  }
+
+  ngOnDestroy() {
+     if (this.liveCheckInterval) clearInterval(this.liveCheckInterval);
+  }
+
+  subscribeToLive() {
+    const ev = this.event();
+    if (!ev?.id) return;
+    this.eventService.subscribeToLive(ev.id).subscribe({
+      next: () => {
+        this.subscribedToLive.set(true);
+        this.notificationMsg.set({ text: '🔔 Vous serez notifié dès que la session commence !', type: 'success' });
+        setTimeout(() => this.notificationMsg.set(null), 4000);
+      },
+      error: (err) => {
+        console.error('🔥 BACKEND ERROR DETAILS:', err.error);
+      }
+    });
+  }
+
+  unsubscribeFromLive() {
+    const ev = this.event();
+    if (!ev?.id) return;
+    this.eventService.unsubscribeFromLive(ev.id).subscribe({
+      next: () => {
+        this.subscribedToLive.set(false);
+        this.notificationMsg.set({ text: 'Notification désactivée.', type: 'warning' });
+        setTimeout(() => this.notificationMsg.set(null), 3000);
+      }
     });
   }
 
@@ -502,15 +600,21 @@ export class EventDetailComponent implements OnInit {
     if (!ev || !ev.eventDate) return false;
     if (ev.status === 'COMPLETED') return false;
 
+    // Organizers can always enter to prepare the room
+    if (this.isOrganizer(ev)) return true;
+
+    // If the host is already live, bypass the time check completely!
+    if (this.hostIsLive() && this.isOnline(ev)) {
+        if (ev.targetAudience === 'PUBLIC') return true;
+        if (this.participationStatus() === 'CONFIRMED') return true;
+    }
+
     const now = new Date();
     const eventTime = new Date(ev.eventDate);
     const diff = (eventTime.getTime() - now.getTime()) / (1000 * 60);
     
     // Check if we are within the allowed time window (15 mins before to 8 hours after)
     const timeOk = diff <= 15 && diff >= -480;
-
-    // Organizers can always enter to prepare the room
-    if (this.isOrganizer(ev)) return true;
 
     // For others, they must be confirmed/public AND within the time window
     if (!timeOk) return false;
@@ -536,17 +640,33 @@ export class EventDetailComponent implements OnInit {
     if (!ev?.id) return;
     this.actionLoading.set(true);
     this.eventService.joinEvent(ev.id).subscribe({
-      next: () => { this.checkParticipation(); this.actionLoading.set(false); },
+      next: () => { 
+        this.checkParticipation(); 
+        this.actionLoading.set(false); 
+        this.notificationMsg.set({
+          text: "Demande de participation enregistrée ! Vous recevrez un email de confirmation de votre statut.", 
+          type: 'success'
+        });
+        setTimeout(() => this.notificationMsg.set(null), 5000);
+      },
       error: () => this.actionLoading.set(false)
     });
   }
 
   cancel() {
     const ev = this.event();
-    if (!ev?.id || !confirm('Annuler votre participation ?')) return;
+    if (!ev?.id || !confirm('Voulez-vous vraiment annuler votre participation ?')) return;
     this.actionLoading.set(true);
     this.eventService.cancelParticipation(ev.id).subscribe({
-      next: () => { this.checkParticipation(); this.actionLoading.set(false); },
+      next: () => { 
+        this.checkParticipation(); 
+        this.actionLoading.set(false);
+        this.notificationMsg.set({
+          text: "Participation annulée. Si vous étiez confirmé, un email d'annulation vous sera envoyé.", 
+          type: 'warning'
+        });
+        setTimeout(() => this.notificationMsg.set(null), 5000);
+      },
       error: () => this.actionLoading.set(false)
     });
   }

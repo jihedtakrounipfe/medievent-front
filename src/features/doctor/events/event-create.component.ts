@@ -1,9 +1,9 @@
-import { Component, inject, signal, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { EventService } from '../../../core/services/event.service';
 import { UploadService } from '../../../core/services/upload.service';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { Specialization } from '../../../core/user/enums/specialization.enum';
 import { AuthFacade } from '../../../core/services/auth.facade';
 import { UserService } from '../../../core/services/user.service';
@@ -25,7 +25,7 @@ export function futureDateValidator(): ValidatorFn {
 @Component({
   selector: 'app-event-create',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   template: `
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
@@ -35,8 +35,13 @@ export function futureDateValidator(): ValidatorFn {
       <div class="bg-white border-b border-gray-200 py-6 sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">Studio de Création</h1>
-            <p class="text-gray-500 font-medium text-sm mt-1">Configurez votre événement professionnel</p>
+            <div class="flex items-center gap-3">
+              <a routerLink="/doctor/events/my" class="text-gray-400 hover:text-gray-600 transition-colors">
+                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              </a>
+              <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">{{ isEditMode() ? 'Modifier la Session' : 'Studio de Création' }}</h1>
+            </div>
+            <p class="text-gray-500 font-medium text-sm mt-1 ml-8">Configurez votre événement professionnel</p>
           </div>
           <div class="flex items-center gap-4">
              <div class="px-4 py-2 bg-gray-50 rounded-lg flex items-center gap-2 border border-gray-200">
@@ -46,7 +51,7 @@ export function futureDateValidator(): ValidatorFn {
              <button (click)="onSubmit()" [disabled]="eventForm.invalid || loading()"
                      class="px-6 py-2.5 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                 <span *ngIf="loading()" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                Publier la Session
+                {{ isEditMode() ? 'Enregistrer les modifications' : 'Publier la Session' }}
              </button>
           </div>
         </div>
@@ -76,14 +81,12 @@ export function futureDateValidator(): ValidatorFn {
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Spécialité <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Spécialité</label>
                     <select formControlName="specialization" 
-                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('specialization'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('specialization')}"
-                            class="w-full px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none appearance-none">
+                            class="w-full px-4 py-3 bg-white border border-gray-300 focus:ring-teal-500 focus:border-teal-500 rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none appearance-none">
                       <option value="" disabled>Choisir la spécialité</option>
                       <option *ngFor="let s of specializations" [value]="s">{{ formatLabel(s) }}</option>
                     </select>
-                    <p *ngIf="isFieldInvalid('specialization')" class="mt-1 text-xs text-red-500">Veuillez sélectionner une spécialité.</p>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Image de couverture</label>
@@ -180,7 +183,7 @@ export function futureDateValidator(): ValidatorFn {
               </h3>
               
                 <div class="space-y-4">
-                  <label class="block text-sm font-medium text-gray-700">Invitations : Co-présentateurs <span class="text-red-500">*</span></label>
+                  <label class="block text-sm font-medium text-gray-700">Invitations : Co-présentateurs</label>
                   
                   <!-- Search Doctors -->
                   <div class="relative">
@@ -202,7 +205,7 @@ export function futureDateValidator(): ValidatorFn {
                           </div>
                         </div>
                         <div class="flex gap-2">
-                           <button (click)="addStaff(doc, 'SPEAKER')" class="text-[10px] font-bold text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg hover:bg-teal-100 transition-colors flex items-center gap-1.5">
+                           <button (click)="addStaff(doc, 'SPEAKER')" type="button" class="text-[10px] font-bold text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg hover:bg-teal-100 transition-colors flex items-center gap-1.5">
                               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                               Présentateur
                            </button>
@@ -227,7 +230,7 @@ export function futureDateValidator(): ValidatorFn {
                                 <p class="text-[9px] text-gray-500">{{ s.specialization || 'Médecin' }}</p>
                               </div>
                             </div>
-                            <button (click)="removeStaff(s.id, 'SPEAKER')" class="text-gray-400 hover:text-red-500 transition-colors p-1 opacity-0 group-hover:opacity-100">
+                            <button (click)="removeStaff(s.id, 'SPEAKER')" type="button" class="text-gray-400 hover:text-red-500 transition-colors p-1 opacity-0 group-hover:opacity-100">
                               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                           </div>
@@ -260,11 +263,9 @@ export function futureDateValidator(): ValidatorFn {
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Agenda Détaillé <span class="text-red-500">*</span></label>
-                  <textarea formControlName="agenda" placeholder="Chronologie de l'intervention..."
-                            [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('agenda'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('agenda')}"
-                            class="w-full h-32 px-4 py-3 bg-white border rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none resize-y"></textarea>
-                  <p *ngIf="isFieldInvalid('agenda')" class="mt-1 text-xs text-red-500">L'agenda est requis.</p>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Agenda Détaillé</label>
+                  <textarea formControlName="agenda" placeholder="Chronologie de l'intervention (Optionnel)..."
+                            class="w-full h-32 px-4 py-3 bg-white border border-gray-300 focus:ring-teal-500 focus:border-teal-500 rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none resize-y"></textarea>
                 </div>
             </div>
           </div>
@@ -370,12 +371,13 @@ export function futureDateValidator(): ValidatorFn {
     .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
   `]
 })
-export class EventCreateComponent implements AfterViewInit, OnDestroy {
+export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   private fb           = inject(FormBuilder);
   private eventService = inject(EventService);
   private uploadService = inject(UploadService);
   private userService   = inject(UserService);
   private router        = inject(Router);
+  private route         = inject(ActivatedRoute);
   public authFacade     = inject(AuthFacade);
 
   loading         = signal(false);
@@ -383,6 +385,9 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
   locationType    = signal<'online' | 'physical'>('online');
   selectedAddress = signal<string>('');
   
+  isEditMode      = signal(false);
+  eventId         = signal<number | null>(null);
+
   // Speaker selection state
   doctorResults = signal<Doctor[]>([]);
   selectedSpeakers = signal<{id: number, fullName: string, email: string, specialization: string}[]>([]);
@@ -406,14 +411,78 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
     location:       ['SALLE_VIRTUELLE_INTERNE', [Validators.required]],
     targetAudience: ['DOCTORS_ONLY', [Validators.required]],
     maxParticipants:[50, [Validators.min(1)]],
-    specialization: ['', [Validators.required]],
+    specialization: [''],
     speakers:       [[]], // List of SpeakerDTO objects
     moderators:     [[]], // List of SpeakerDTO objects
     speakerName:    [''], // External Guest Name
     speakerBio:     [''], // External Guest Bio
-    agenda:         ['', [Validators.required]],
+    agenda:         [''],
     bannerUrl:      ['', [Validators.pattern('https?://.*')]]
   });
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.isEditMode.set(true);
+      this.eventId.set(+id);
+      
+      // Since edit mode implies the event is already created,
+      // we remove the futureDateValidator so they can update an ongoing/past event if needed,
+      // or at least not fail validation if the event just started.
+      this.eventForm.controls.eventDate.setValidators([Validators.required]);
+      this.eventForm.controls.eventDate.updateValueAndValidity();
+
+      this.eventService.getEventById(+id).subscribe({
+        next: (ev) => {
+          // Format date for datetime-local (YYYY-MM-DDThh:mm)
+          let formattedDate = '';
+          if (ev.eventDate) {
+            const d = new Date(ev.eventDate);
+            const tzoffset = d.getTimezoneOffset() * 60000; // offset in milliseconds
+            formattedDate = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 16);
+          }
+
+          this.eventForm.patchValue({
+            title: ev.title,
+            description: ev.description,
+            eventDate: formattedDate,
+            location: ev.location,
+            targetAudience: ev.targetAudience,
+            maxParticipants: ev.maxParticipants,
+            specialization: ev.specialization,
+            speakerName: ev.speakerName,
+            speakerBio: ev.speakerBio,
+            agenda: ev.agenda,
+            bannerUrl: ev.bannerUrl
+          });
+
+          // Restore speakers
+          if (ev.speakers && ev.speakers.length > 0) {
+            const mappedSpeakers = ev.speakers.map(s => ({
+              id: s.id as number,
+              fullName: s.fullName,
+              email: s.email as string,
+              specialization: this.formatLabel(s.specialization)
+            }));
+            this.selectedSpeakers.set(mappedSpeakers);
+            this.eventForm.patchValue({ speakers: mappedSpeakers as any });
+          }
+
+          // Restore Location Type
+          if (ev.location === 'SALLE_VIRTUELLE_INTERNE' || ev.location?.toLowerCase().includes('virtuel') || ev.location?.toLowerCase().includes('online')) {
+            this.setLocationType('online');
+          } else {
+            this.setLocationType('physical');
+            this.selectedAddress.set(ev.location || '');
+          }
+        },
+        error: () => {
+          alert('Erreur: Impossible de charger l\'événement.');
+          this.router.navigate(['/doctor/events/my']);
+        }
+      });
+    }
+  }
 
   // Checklist helper
   isFieldValid(field: string): boolean {
@@ -508,9 +577,8 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
     if (type === 'online') {
       this.eventForm.patchValue({ location: 'SALLE_VIRTUELLE_INTERNE' });
     } else {
-      this.eventForm.patchValue({ location: '' });
+      this.eventForm.patchValue({ location: this.selectedAddress() || '' });
     }
-    this.selectedAddress.set('');
     if (type === 'physical') {
       setTimeout(() => this.initMap(), 150);
     } else {
@@ -536,7 +604,7 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
     const mapEl = document.getElementById('event-map');
     if (!mapEl || this.map) return;
 
-    this.map = L.map('event-map').setView([48.8566, 2.3522], 12);
+    this.map = L.map('event-map').setView([36.8065, 10.1815], 12); // Default to Tunis
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(this.map);
@@ -569,11 +637,16 @@ export class EventCreateComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.loading.set(true);
-    this.eventService.createEvent(this.eventForm.value as any).subscribe({
+    
+    const obs$ = this.isEditMode() && this.eventId()
+      ? this.eventService.updateEvent(this.eventId()!, this.eventForm.value as any)
+      : this.eventService.createEvent(this.eventForm.value as any);
+
+    obs$.subscribe({
       next:  () => this.router.navigate(['/doctor/events/my']),
       error: () => {
         this.loading.set(false);
-        alert("Erreur lors de la création de l'événement.");
+        alert(this.isEditMode() ? "Erreur lors de la modification de l'événement." : "Erreur lors de la création de l'événement.");
       }
     });
   }

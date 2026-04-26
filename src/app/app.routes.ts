@@ -78,6 +78,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'doctor/events/edit/:id',
+    loadComponent: () => import('../features/doctor/events/event-create.component').then(m => m.EventCreateComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'doctor/pending-approval',
     loadComponent: () =>
       import('../features/doctor-approval/pending-approval.component')

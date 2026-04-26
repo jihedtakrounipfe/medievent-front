@@ -197,4 +197,29 @@ export class EventService {
   searchDoctors(query: string): Observable<any> {
     return this.http.get<any>(`${this.API}/users/search?name=${query}&userType=DOCTOR&size=5`);
   }
+
+  // ─── Live Subscriptions & Notifications (Backend Persisted) ──────────────────────
+  subscribeToLive(eventId: number): Observable<void> {
+    return this.http.post<void>(`${this.API}/events/${eventId}/subscribe`, {});
+  }
+
+  unsubscribeFromLive(eventId: number): Observable<void> {
+    return this.http.post<void>(`${this.API}/events/${eventId}/unsubscribe`, {});
+  }
+
+  checkSubscriptionStatus(eventId: number): Observable<{ subscribed: boolean }> {
+    return this.http.get<{ subscribed: boolean }>(`${this.API}/events/${eventId}/is-subscribed`);
+  }
+
+  getMyNotifications(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.API}/notifications/my`);
+  }
+
+  markNotificationRead(id: number): Observable<void> {
+    return this.http.post<void>(`${this.API}/notifications/${id}/read`, {});
+  }
+
+  clearNotifications(): Observable<void> {
+    return this.http.delete<void>(`${this.API}/notifications/clear`);
+  }
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthFacade } from '../../services/auth.facade';
+import { NotificationService } from '../../services/notification.service';
 import { AnyUser } from '../../user';
 
 @Component({
@@ -15,6 +16,7 @@ import { AnyUser } from '../../user';
 export class NavbarComponent implements OnInit, OnDestroy {
   private auth = inject(AuthFacade);
   private destroy$ = new Subject<void>();
+  public notifService = inject(NotificationService);
 
   isScrolled        = false;
   isMobileMenuOpen  = false;
@@ -32,12 +34,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   navLinks = [...this.baseLinks];
 
-  notifications = [
-    { icon: '📅', text: 'Rappel : RDV demain à 10h30',          time: 'Il y a 1h',  unread: true  },
-    { icon: '💊', text: 'Prenez votre médicament (Metformine)',  time: 'Il y a 2h',  unread: true  },
-    { icon: '📋', text: "Résultat d'analyse disponible",         time: 'Hier',       unread: false },
-  ];
-
   @HostListener('window:scroll')
   onScroll(): void { this.isScrolled = window.scrollY > 10; }
 
@@ -50,12 +46,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.auth.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      console.log('[NAVBAR] user received:', user);
-      console.log('[NAVBAR] userType:', user?.userType);
       this.isDoctor = user?.userType === 'DOCTOR';
       const isPatient = user?.userType === 'PATIENT';
       
-      let extraLinks = [];
+      if (user) {
+        this.notifService.startPolling();
+      } else {
+        this.notifService.stopPolling();
+      }
+
+      let extraLinks: { label: string; path: string }[] = [];
       if (this.isDoctor) {
         extraLinks.push({ label: 'Agenda Global', path: '/events' });
         extraLinks.push({ label: 'Mes Conférences', path: '/doctor/events/my' });
@@ -67,26 +67,34 @@ export class NavbarComponent implements OnInit, OnDestroy {
         ...this.baseLinks,
         ...extraLinks
       ];
-      console.log('[NAVBAR] navLinks:', this.navLinks);
     });
   }
 
   ngOnDestroy(): void {
+    this.notifService.stopPolling();
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  toggleMobile(): void    { this.isMobileMenuOpen  = !this.isMobileMenuOpen; }
-  toggleNotif(): void     { this.isNotifOpen        = !this.isNotifOpen;   this.isUserMenuOpen = false; }
-  toggleUser(): void      { this.isUserMenuOpen     = !this.isUserMenuOpen; this.isNotifOpen   = false; }
-  closeMobile(): void     { this.isMobileMenuOpen   = false; }
-  markAllRead(): void     { this.notifications.forEach(n => n.unread = false); }
+  toggleMobile(): void { this.isMobileMenuOpen = !this.isMobileMenuOpen; }
+  
+  toggleNotif(): void {
+    this.isNotifOpen = !this.isNotifOpen;
+    this.isUserMenuOpen = false;
+    // Mark all read when opening
+    if (this.isNotifOpen) this.notifService.markAllRead();
+  }
 
-  get unreadCount(): number { return this.notifications.filter(n => n.unread).length; }
+  toggleUser(): void  { this.isUserMenuOpen = !this.isUserMenuOpen; this.isNotifOpen = false; }
+  closeMobile(): void { this.isMobileMenuOpen = false; }
+
+  get unreadCount(): number { return this.notifService.unreadCount(); }
 
   logout(): void {
     this.isUserMenuOpen = false;
     this.isNotifOpen = false;
+    this.notifService.stopPolling();
+    this.notifService.clear();
     this.auth.logout();
   }
 
@@ -116,5 +124,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
       case 'INSTITUTION': return 'Institution';
       default: return 'Utilisateur';
     }
+  }
+
+  timeAgo(date: Date): string {
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - new Date(date).getTime()) / 1000);
+    if (diff < 60) return 'À l\'instant';
+    if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
+    return `Il y a ${Math.floor(diff / 3600)}h`;
   }
 }

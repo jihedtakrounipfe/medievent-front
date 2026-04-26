@@ -110,20 +110,30 @@ import { Router, RouterModule } from '@angular/router';
             </div>
             
             <div class="flex gap-2">
-              <button (click)="$event.stopPropagation(); openParticipantsModal(ev)" 
+              <button *ngIf="!isOnline(ev)" (click)="$event.stopPropagation(); openParticipantsModal(ev)" 
                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                 Participants
+              </button>
+              <button (click)="$event.stopPropagation()" [routerLink]="['/doctor/events/edit', ev.id]" 
+                      class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Modifier
               </button>
               <button *ngIf="isOnline(ev)" (click)="$event.stopPropagation(); openInviteModal(ev)" 
                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                 Inviter
+              </button>
+              <button *ngIf="ev.status !== 'COMPLETED'" (click)="$event.stopPropagation(); completeEvent(ev)" 
+                      class="inline-flex items-center px-3 py-1.5 border border-emerald-200 shadow-sm text-xs font-medium rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white transition-colors" title="Marquer la session comme terminée">
+                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Terminer
               </button>
               <button *ngIf="canJoinRoom(ev) && !isFinished(ev)" [routerLink]="['/events', ev.id, 'room']" (click)="$event.stopPropagation()" 
                       class="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 group/btn">
                  <span class="w-1.5 h-1.5 rounded-full bg-red-600 group-hover/btn:bg-white animate-pulse"></span>
                  Live
               </button>
-              <div *ngIf="isOnline(ev) && !canJoinRoom(ev) && !isFinished(ev)" class="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-bold flex items-center gap-1">
+              <div *ngIf="isOnline(ev) && ev.status !== 'COMPLETED' && !canJoinRoom(ev) && !isFinished(ev)" class="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-bold flex items-center gap-1">
                  Bientôt
               </div>
               <div *ngIf="ev.status === 'COMPLETED'" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
@@ -231,6 +241,11 @@ import { Router, RouterModule } from '@angular/router';
       </p>
       <div class="space-y-4">
         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nom de l'invité</label>
+          <input [(ngModel)]="inviteGuestName" type="text" placeholder="Dr. Dupont" 
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors" />
+        </div>
+        <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Adresse email</label>
           <input [(ngModel)]="inviteGuestEmail" type="email" placeholder="nom@exemple.com" 
                  class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors" />
@@ -245,7 +260,9 @@ import { Router, RouterModule } from '@angular/router';
 
         <div class="flex gap-3 pt-2">
           <button (click)="closeInviteModal()" class="flex-1 px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">Annuler</button>
-          <button (click)="sendGuestInvite()" [disabled]="!inviteGuestEmail" class="flex-1 px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50">Envoyer l'invitation</button>
+          <button (click)="sendGuestInvite()" [disabled]="!inviteGuestEmail || inviteSending()" class="flex-1 px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50">
+            {{ inviteSending() ? 'Envoi...' : 'Envoyer l\\'invitation' }}
+          </button>
         </div>
       </div>
     </div>
@@ -262,6 +279,7 @@ export class EventMyListComponent implements OnInit {
   events = signal<MedicalEvent[]>([]);
   
   inviteModalEvent = signal<MedicalEvent | null>(null);
+  inviteGuestName  = '';
   inviteGuestEmail = '';
   inviteSending    = signal(false);
   inviteSuccess    = signal(false);
@@ -277,7 +295,23 @@ export class EventMyListComponent implements OnInit {
 
   loadEvents() {
     this.eventService.getMyEvents().subscribe(res => {
-      this.events.set(res.sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()));
+      const now = new Date();
+
+      this.events.set(
+        res
+          .filter(ev => {
+            // COMPLETED events: show for 20 min after the scheduled event time
+            // then hide (they move to admin archive)
+            if (ev.status === 'COMPLETED') {
+              const eventTime = new Date(ev.eventDate);
+              const minutesSinceEvent = (now.getTime() - eventTime.getTime()) / (1000 * 60);
+              // If it's been more than 20 min since the event was scheduled, hide it
+              return minutesSinceEvent < 20;
+            }
+            return true;
+          })
+          .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
+      );
     });
   }
 
@@ -290,14 +324,30 @@ export class EventMyListComponent implements OnInit {
     return this.events().filter(ev => new Date(ev.eventDate) > now).length;
   }
 
+  completeEvent(ev: MedicalEvent) {
+    if (!ev.id) return;
+    if (confirm('Voulez-vous marquer cet événement comme terminé ?')) {
+       // Estimate participant count based on confirmed participants
+       const count = ev.confirmedCount || 0;
+       this.eventService.completeEvent(ev.id, count).subscribe({
+         next: () => {
+           this.loadEvents();
+           alert('Événement marqué comme terminé.');
+         },
+         error: () => alert('Erreur lors de la clôture de l\'événement.')
+       });
+    }
+  }
+
   delete(id: number) {
-    if (confirm('Supprimer cette conférence ?')) {
+    if (confirm('Voulez-vous vraiment annuler cet événement ? Un email d\'annulation sera automatiquement envoyé à tous les participants inscrits.')) {
       this.eventService.deleteEvent(id).subscribe(() => this.loadEvents());
     }
   }
 
   openInviteModal(ev: MedicalEvent) {
     this.inviteModalEvent.set(ev);
+    this.inviteGuestName = '';
     this.inviteGuestEmail = '';
     this.inviteSuccess.set(false);
     this.inviteError.set('');
@@ -329,7 +379,7 @@ export class EventMyListComponent implements OnInit {
     const ev = this.inviteModalEvent();
     if (!ev?.id || !this.inviteGuestEmail) return;
     this.inviteSending.set(true);
-    this.eventService.inviteGuestByEmail(ev.id, this.inviteGuestEmail, '').subscribe({
+    this.eventService.inviteGuestByEmail(ev.id, this.inviteGuestEmail, this.inviteGuestName).subscribe({
       next: () => {
         this.inviteSending.set(false);
         this.inviteSuccess.set(true);

@@ -54,28 +54,33 @@
                     border border-stone-100 z-50 py-1">
           <div class="flex items-center justify-between px-4 py-2.5 border-b border-stone-100">
             <span class="font-semibold text-stone-800 text-sm">Notifications</span>
-            <button (click)="markAllRead()"
-                    class="text-xs text-teal-600 hover:text-teal-700 font-medium">
-              Tout lire
+            <button (click)="notifService.clear()"
+                    class="text-xs text-stone-400 hover:text-rose-500 font-medium transition-colors">
+              Effacer tout
             </button>
           </div>
-          <div class="max-h-64 overflow-y-auto">
-            <div *ngFor="let n of notifications"
-                 class="flex items-start gap-3 px-4 py-3 hover:bg-stone-50 cursor-pointer"
-                 [class.bg-teal-50]="n.unread">
-              <span class="text-lg mt-0.5">{{ n.icon }}</span>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-stone-700 leading-snug">{{ n.text }}</p>
-                <p class="text-xs text-stone-400 mt-0.5">{{ n.time }}</p>
-              </div>
-              <span *ngIf="n.unread"
-                    class="w-2 h-2 bg-teal-500 rounded-full flex-shrink-0 mt-1.5"></span>
+          <div class="max-h-72 overflow-y-auto">
+            <!-- Empty state -->
+            <div *ngIf="notifService.notifications().length === 0" class="py-10 text-center">
+              <svg class="w-10 h-10 text-stone-200 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              <p class="text-xs text-stone-400 font-medium">Aucune notification</p>
             </div>
-          </div>
-          <div class="px-4 py-2.5 border-t border-stone-100 text-center">
-            <a routerLink="/notifications"
-               class="text-sm text-teal-600 hover:text-teal-700 font-medium no-underline">
-              Voir toutes →
+            <!-- Live notifications -->
+            <a *ngFor="let n of notifService.notifications()"
+               [routerLink]="n.type === 'live_started' ? ['/events', n.eventId, 'room'] : ['/events', n.eventId]"
+               (click)="isNotifOpen = false"
+               class="flex items-start gap-3 px-4 py-3 hover:bg-stone-50 cursor-pointer no-underline"
+               [class.bg-red-50]="n.type === 'live_started' && !n.read">
+              <span class="text-xl mt-0.5 flex-shrink-0">{{ n.type === 'live_started' ? '🔴' : '🔔' }}</span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-stone-800 leading-snug">{{ n.title }}</p>
+                <p class="text-xs text-stone-500 mt-0.5 leading-snug">{{ n.message }}</p>
+                <p class="text-[10px] text-stone-400 mt-1">{{ timeAgo(n.timestamp) }}</p>
+              </div>
+              <span *ngIf="!n.read"
+                    class="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-1.5"></span>
             </a>
           </div>
         </div>

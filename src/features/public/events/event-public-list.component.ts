@@ -124,7 +124,7 @@ import { Specialization } from '../../../core/user/enums/specialization.enum';
                      <span class="w-1.5 h-1.5 rounded-full bg-red-600 group-hover/btn:bg-white animate-pulse"></span>
                      Live
                   </button>
-                  <div *ngIf="isOnline(ev) && !canJoinRoom(ev) && !isFinished(ev)" class="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-bold flex items-center gap-1">
+                  <div *ngIf="isOnline(ev) && ev.status !== 'COMPLETED' && !canJoinRoom(ev) && !isFinished(ev)" class="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-bold flex items-center gap-1">
                      Bientôt
                   </div>
                   <div *ngIf="ev.status === 'COMPLETED'" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5">
@@ -191,14 +191,26 @@ export class EventPublicListComponent implements OnInit {
   refreshEvents() {
     this.eventService.getActiveEvents().subscribe(res => {
       const user = this.authFacade.currentUser;
-      // Defensive check for doctor roles (including potential subtypes)
       const userType = user?.userType?.toString() || '';
       const isDoc = userType === 'DOCTOR' || userType.startsWith('DOCTOR_');
-      
-      this.events.set(res.filter(e => 
-        isDoc ? (e.targetAudience === 'PUBLIC' || e.targetAudience === 'DOCTORS_ONLY') 
-              : e.targetAudience === 'PUBLIC'
-      ));
+      const now = new Date();
+
+      this.events.set(res.filter(e => {
+        // Audience filter
+        const audienceOk = isDoc
+          ? (e.targetAudience === 'PUBLIC' || e.targetAudience === 'DOCTORS_ONLY')
+          : e.targetAudience === 'PUBLIC';
+        if (!audienceOk) return false;
+
+        // Hide COMPLETED events: they go to admin archive after 20 min from event start
+        if (e.status === 'COMPLETED') {
+          const eventTime = new Date(e.eventDate);
+          const minutesSinceEvent = (now.getTime() - eventTime.getTime()) / (1000 * 60);
+          return minutesSinceEvent < 20;
+        }
+
+        return true;
+      }));
     });
   }
 
