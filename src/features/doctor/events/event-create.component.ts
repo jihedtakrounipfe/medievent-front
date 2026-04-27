@@ -449,7 +449,7 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     speakerBio:     [''], // External Guest Bio
     agenda:         [''],
     bannerUrl:      ['', [Validators.pattern('https?://.*')]],
-    tags:           [[]]
+    tags:           [[] as string[]]
   });
 
   ngOnInit(): void {
