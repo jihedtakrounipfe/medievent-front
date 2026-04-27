@@ -42,15 +42,6 @@ import { Router, RouterModule } from '@angular/router';
           </div>
        </div>
        <div class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm flex items-center">
-          <div class="p-3 rounded-xl bg-blue-50 text-blue-600 mr-4">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-          </div>
-          <div>
-            <p class="text-sm font-medium text-gray-500">Inscriptions</p>
-            <p class="text-2xl font-bold text-gray-900">{{ totalParticipants() }}</p>
-          </div>
-       </div>
-       <div class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm flex items-center">
           <div class="p-3 rounded-xl bg-indigo-50 text-indigo-600 mr-4">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>

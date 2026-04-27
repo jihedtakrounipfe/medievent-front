@@ -133,7 +133,7 @@ export function futureDateValidator(): ValidatorFn {
                          <p *ngIf="eventForm.get('eventDate')?.hasError('pastDate')">La date doit être ultérieure à aujourd'hui.</p>
                       </div>
                     </div>
-                    <div>
+                    <div *ngIf="locationType() === 'physical'">
                       <label class="block text-sm font-medium text-gray-700 mb-1">Capacité Max</label>
                       <input type="number" formControlName="maxParticipants" 
                              [ngClass]="{'border-red-500 focus:ring-red-500 focus:border-red-500': isFieldInvalid('maxParticipants'), 'border-gray-300 focus:ring-teal-500 focus:border-teal-500': !isFieldInvalid('maxParticipants')}"
@@ -171,19 +171,40 @@ export function futureDateValidator(): ValidatorFn {
                     <button type="button" (click)="toggleAudience()" [class.bg-teal-500]="eventForm.value.targetAudience === 'PUBLIC'" [class.bg-gray-300]="eventForm.value.targetAudience !== 'PUBLIC'" class="w-12 h-6 rounded-full relative transition-colors duration-300">
                        <div [class.translate-x-6]="eventForm.value.targetAudience === 'PUBLIC'" class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300"></div>
                     </button>
-                 </div>
+                    
+                    <!-- Tags -->
+                    <div class="pt-6 border-t border-gray-100">
+                      <label class="block text-sm font-medium text-gray-700 mb-3">Tags & Catégories <span class="text-xs text-gray-400 font-normal ml-2">(Sélectionnez ou créez les vôtres)</span></label>
+                      
+                      <!-- Custom Tag Input -->
+                      <div class="flex items-center gap-2 mb-4">
+                         <input type="text" #customTagInput (keyup.enter)="addCustomTag(customTagInput)" 
+                                placeholder="Ajouter un tag personnalisé..." 
+                                class="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none transition-all" />
+                         <button type="button" (click)="addCustomTag(customTagInput)" class="px-4 py-2 bg-teal-50 text-teal-600 font-bold text-xs rounded-xl hover:bg-teal-100 transition-colors">
+                            Ajouter
+                         </button>
+                      </div>
 
-                 <!-- Tags -->
-                 <div class="pt-6 border-t border-gray-100">
-                   <label class="block text-sm font-medium text-gray-700 mb-3">Tags & Catégories <span class="text-xs text-gray-400 font-normal ml-2">(Pour les recommandations)</span></label>
-                   <div class="flex flex-wrap gap-2">
-                     <button *ngFor="let tag of availableTags" type="button"
-                             (click)="toggleTag(tag)"
-                             [class]="selectedTags().includes(tag) ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300 hover:bg-teal-50'"
-                             class="px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-200">
-                       {{ tag }}
-                     </button>
-                   </div>
+                      <div class="flex flex-wrap gap-2">
+                        <button *ngFor="let tag of availableTags" type="button"
+                                (click)="toggleTag(tag)"
+                                [class]="selectedTags().includes(tag) ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300 hover:bg-teal-50'"
+                                class="px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-200">
+                          {{ tag }}
+                        </button>
+                        
+                        <!-- Display custom tags that are not in the predefined list -->
+                        <ng-container *ngFor="let tag of selectedTags()">
+                           <button *ngIf="!availableTags.includes(tag)" type="button"
+                                   (click)="toggleTag(tag)"
+                                   class="bg-indigo-600 text-white border-indigo-600 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-200 flex items-center gap-2">
+                             {{ tag }}
+                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                           </button>
+                        </ng-container>
+                      </div>
+                    </div>
                  </div>
               </div>
             </div>
@@ -413,9 +434,22 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     'Cardiologie', 'Neurologie', 'Pédiatrie', 'Oncologie', 
     'Médecine d\'urgence', 'Télémédecine', 'Santé publique', 
     'Nutrition', 'Santé mentale', 'Chirurgie', 'Dermatologie',
-    'Recherche médicale', 'Gynécologie', 'Médecine interne'
+    'Recherche médicale', 'Gynécologie', 'Médecine interne',
+    'Intelligence Artificielle', 'Innovation', 'Big Data', 'Bio-technologie'
   ];
   selectedTags = signal<string[]>([]);
+
+  addCustomTag(input: HTMLInputElement) {
+    const val = input.value.trim();
+    if (!val) return;
+    
+    const current = this.selectedTags();
+    if (!current.includes(val)) {
+      this.selectedTags.set([...current, val]);
+      this.eventForm.patchValue({ tags: this.selectedTags() as any });
+    }
+    input.value = ''; // Reset input
+  }
 
   formatLabel(s: string | undefined | null): string {
     if (!s) return '';
@@ -449,7 +483,7 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     speakerBio:     [''], // External Guest Bio
     agenda:         [''],
     bannerUrl:      ['', [Validators.pattern('https?://.*')]],
-    tags:           [[] as string[]]
+    tags:           this.fb.control<string[]>([])
   });
 
   ngOnInit(): void {
@@ -617,9 +651,15 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   setLocationType(type: 'online' | 'physical'): void {
     this.locationType.set(type);
     if (type === 'online') {
-      this.eventForm.patchValue({ location: 'SALLE_VIRTUELLE_INTERNE' });
+      this.eventForm.patchValue({ 
+        location: 'SALLE_VIRTUELLE_INTERNE',
+        maxParticipants: 1000 // Set a high default for online events
+      });
     } else {
-      this.eventForm.patchValue({ location: this.selectedAddress() || '' });
+      this.eventForm.patchValue({ 
+        location: this.selectedAddress() || '',
+        maxParticipants: 50 // Reset to a reasonable physical default
+      });
     }
     if (type === 'physical') {
       setTimeout(() => this.initMap(), 150);
