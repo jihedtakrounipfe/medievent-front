@@ -216,8 +216,30 @@ export function futureDateValidator(): ValidatorFn {
                  Intervenant & Programme
               </h3>
               
-                <div class="space-y-4">
-                  <label class="block text-sm font-medium text-gray-700">Invitations : Co-présentateurs</label>
+                <div class="space-y-6">
+                  <!-- Main Speaker & Bio -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 mb-1.5">Intervenant Principal</label>
+                      <input type="text" formControlName="speakerName" placeholder="Ex: Dr. Ahmed Ben Ali" 
+                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 mb-1.5">Titre / Bio de l'intervenant</label>
+                      <input type="text" formControlName="speakerBio" placeholder="Ex: Chef de service, CHU Tunis" 
+                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all" />
+                    </div>
+                  </div>
+
+                  <!-- Agenda / Programme -->
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Programme Détaillé</label>
+                    <textarea formControlName="agenda" rows="4" placeholder="Décrivez le déroulement de la session..." 
+                              class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all resize-none"></textarea>
+                  </div>
+
+                  <div class="pt-6 border-t border-gray-100">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Invitations : Co-présentateurs</label>
                   
                   <!-- Search Doctors -->
                   <div class="relative">
@@ -277,30 +299,6 @@ export function futureDateValidator(): ValidatorFn {
                     <p class="text-xs font-bold uppercase tracking-widest opacity-60">Aucun co-présentateur ajouté</p>
                   </div>
 
-                <!-- External Speaker (Guest) -->
-                <div class="pt-6 border-t border-gray-100">
-                   <div class="flex items-center gap-2 mb-4">
-                      <input type="checkbox" #hasExternal (change)="0" class="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
-                      <label class="text-sm font-bold text-gray-700">Ajouter un intervenant externe (Guest)</label>
-                   </div>
-                   
-                   <div *ngIf="hasExternal.checked" class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
-                      <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nom Complet</label>
-                        <input type="text" formControlName="speakerName" placeholder="Ex: Pr. Sarah Miller" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
-                      </div>
-                      <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Expertise / Bio</label>
-                        <input type="text" formControlName="speakerBio" placeholder="Université de Stanford..." class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
-                      </div>
-                   </div>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Agenda Détaillé</label>
-                  <textarea formControlName="agenda" placeholder="Chronologie de l'intervention (Optionnel)..."
-                            class="w-full h-32 px-4 py-3 bg-white border border-gray-300 focus:ring-teal-500 focus:border-teal-500 rounded-xl text-gray-900 focus:ring-2 transition-colors outline-none resize-y"></textarea>
-                </div>
             </div>
           </div>
 
