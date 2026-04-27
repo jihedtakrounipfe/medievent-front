@@ -434,7 +434,12 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
 
       this.eventService.getEventById(+id).subscribe({
         next: (ev) => {
-          // Format date for datetime-local (YYYY-MM-DDThh:mm)
+          // Guard: COMPLETED events cannot be edited — redirect back
+          if (ev.status === 'COMPLETED') {
+            alert('Cet événement est terminé et ne peut plus être modifié.');
+            this.router.navigate(['/doctor/events/my']);
+            return;
+          }
           let formattedDate = '';
           if (ev.eventDate) {
             const d = new Date(ev.eventDate);
@@ -638,15 +643,20 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     this.loading.set(true);
     
+    const rawData = { ...this.eventForm.value };
+    // Cleanup: Backend Enum doesn't like empty strings, map to null
+    if (!rawData.specialization) rawData.specialization = null as any;
+
     const obs$ = this.isEditMode() && this.eventId()
-      ? this.eventService.updateEvent(this.eventId()!, this.eventForm.value as any)
-      : this.eventService.createEvent(this.eventForm.value as any);
+      ? this.eventService.updateEvent(this.eventId()!, rawData as any)
+      : this.eventService.createEvent(rawData as any);
 
     obs$.subscribe({
       next:  () => this.router.navigate(['/doctor/events/my']),
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
-        alert(this.isEditMode() ? "Erreur lors de la modification de l'événement." : "Erreur lors de la création de l'événement.");
+        const msg = err.error?.message || (this.isEditMode() ? "Erreur lors de la modification." : "Erreur lors de la création.");
+        alert("🔥 BACKEND ERROR: " + msg);
       }
     });
   }

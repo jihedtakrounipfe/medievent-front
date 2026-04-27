@@ -1,4 +1,5 @@
 import { Injectable, signal, inject } from '@angular/core';
+import { catchError, of } from 'rxjs';
 import { EventService } from './event.service';
 
 export interface AppNotification {
@@ -73,15 +74,24 @@ export class NotificationService {
   }
 
   private fetch() {
-    this.eventService.getMyNotifications().subscribe(res => {
+    this.eventService.getMyNotifications().pipe(
+      catchError((err) => {
+        if (err.status === 401) {
+          console.warn('[NOTIF] Session expired, stopping poll.');
+          this.stopPolling();
+        }
+        return of([]);
+      })
+    ).subscribe(res => {
+      console.log(`[NOTIF-DEBUG] Received ${res.length} notifications from server:`, res);
       const mapped: AppNotification[] = res.map(n => ({
         id: n.id,
         title: n.title,
         message: n.message,
         eventId: n.eventId,
         type: n.type,
-        timestamp: new Date(n.timestamp),
-        read: n.isRead
+        timestamp: new Date(n.timestamp ?? n.createdAt ?? Date.now()),
+        read: n.isRead ?? n.read ?? false
       }));
       this.notifications.set(mapped);
       this.recalcUnread();

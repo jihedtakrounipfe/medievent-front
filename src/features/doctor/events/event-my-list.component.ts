@@ -63,14 +63,17 @@ import { Router, RouterModule } from '@angular/router';
 
     <!-- Management Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div *ngFor="let ev of events()" class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full cursor-pointer relative group" [routerLink]="['/events', ev.id]">
+      <div *ngFor="let ev of events()" class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full relative group">
         
-        <!-- Delete Button Overlay -->
-        <button (click)="$event.stopPropagation(); delete(ev.id!)" 
+        <!-- Delete Button Overlay — outside the routerLink wrapper so it never triggers navigation -->
+        <button (click)="delete(ev.id!)" 
                 class="absolute top-4 right-4 z-10 w-8 h-8 bg-white/90 backdrop-blur text-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-gray-100"
                 title="Supprimer l'événement">
            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
         </button>
+
+        <!-- Card Content — the only area that navigates -->
+        <div class="flex flex-col h-full cursor-pointer" [routerLink]="['/events', ev.id]">
 
         <!-- Card Image Area -->
         <div class="h-48 w-full bg-gray-100 relative">
@@ -114,12 +117,12 @@ import { Router, RouterModule } from '@angular/router';
                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                 Participants
               </button>
-              <button (click)="$event.stopPropagation()" [routerLink]="['/doctor/events/edit', ev.id]" 
+              <button (click)="$event.stopPropagation()" *ngIf="ev.status !== 'COMPLETED'" [routerLink]="['/doctor/events/edit', ev.id]" 
                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                 <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 Modifier
               </button>
-              <button *ngIf="isOnline(ev)" (click)="$event.stopPropagation(); openInviteModal(ev)" 
+              <button *ngIf="isOnline(ev) && ev.status !== 'COMPLETED'" (click)="$event.stopPropagation(); openInviteModal(ev)" 
                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                 Inviter
               </button>
@@ -145,7 +148,9 @@ import { Router, RouterModule } from '@angular/router';
             </div>
           </div>
         </div>
-
+        <!-- end card body (navigable area) -->
+        </div>
+        <!-- end card outer -->
       </div>
     </div>
 
@@ -394,7 +399,7 @@ export class EventMyListComponent implements OnInit {
 
   isOnline(ev: MedicalEvent): boolean {
     const loc = (ev?.location || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return /online|live|virtuel|webinaire|zoom|teams|meet|distance|digitale/.test(loc) || loc.includes('salle');
+    return /online|live|virtuel|webinaire|zoom|teams|meet|distance|digitale/.test(loc);
   }
 
   canJoinRoom(ev: MedicalEvent): boolean {

@@ -1,11 +1,11 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { EventService, MedicalEvent, ParticipantStatus, Participant } from '../../../core/services/event.service';
 import { AuthFacade } from '../../../core/services/auth.facade';
 import { NotificationService } from '../../../core/services/notification.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { catchError, of, Subscription } from 'rxjs';
+import { catchError, of, Subscription, Subject, takeUntil } from 'rxjs';
 import * as QRCode from 'qrcode';
 
 @Component({
@@ -380,7 +380,7 @@ import * as QRCode from 'qrcode';
     }
   `]
 })
-export class EventDetailComponent implements OnInit {
+export class EventDetailComponent implements OnInit, OnDestroy {
   private route        = inject(ActivatedRoute);
   private router       = inject(Router);
   private eventService = inject(EventService);
@@ -404,11 +404,14 @@ export class EventDetailComponent implements OnInit {
   subscribedToLive    = signal(false);
   private liveCheckInterval: any;
   private liveNotifSent = false; // prevent duplicate notifications per session
+  private destroy$ = new Subject<void>(); // for unsubscribing route params
 
   private map: any;
 
   ngOnInit() {
-    this.route.params.subscribe(params => {
+    this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      // Clean up previous event's interval before loading new one
+      if (this.liveCheckInterval) { clearInterval(this.liveCheckInterval); this.liveCheckInterval = null; }
       const id = +params['id'];
       this.requestedId = params['id'];
       if (id) this.loadEvent(id);
@@ -466,7 +469,9 @@ export class EventDetailComponent implements OnInit {
   }
 
   ngOnDestroy() {
-     if (this.liveCheckInterval) clearInterval(this.liveCheckInterval);
+    this.destroy$.next();
+    this.destroy$.complete();
+    if (this.liveCheckInterval) clearInterval(this.liveCheckInterval);
   }
 
   subscribeToLive() {
@@ -592,7 +597,7 @@ export class EventDetailComponent implements OnInit {
   isOnline(ev: MedicalEvent | null | undefined): boolean {
     if (!ev) return false;
     const loc = (ev?.location || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return /online|live|virtuel|webinaire|zoom|teams|meet|distance|digitale/.test(loc) || loc.includes('salle');
+    return /online|live|virtuel|webinaire|zoom|teams|meet|distance|digitale/.test(loc);
   }
 
   canEnterRoom(): boolean {
