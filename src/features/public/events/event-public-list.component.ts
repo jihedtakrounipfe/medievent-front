@@ -258,7 +258,11 @@ export class EventPublicListComponent implements OnInit {
   });
 
   ngOnInit() {
+    // Load events immediately, independent of auth state
+    this.refreshEvents();
+
     this.authFacade.currentUser$.subscribe(user => {
+      // Reload with correct audience filtering once user is known
       this.refreshEvents();
       if (user && user.userType) { // only for authenticated users
         const interests = user.interests || [];
@@ -297,7 +301,11 @@ export class EventPublicListComponent implements OnInit {
     this.userService.updateInterests(this.selectedInterests()).subscribe({
       next: () => {
         this.showInterestModal.set(false);
-        this.loadRecommended();
+        // Refresh the in-memory user so interests.length > 0 on next visit (prevents popup reappearing)
+        this.authFacade.refreshCurrentUser().subscribe({
+          next: () => this.loadRecommended(),
+          error: () => this.loadRecommended() // still load recommendations even if refresh fails
+        });
       },
       error: (err) => console.error('Failed to update interests', err)
     });
