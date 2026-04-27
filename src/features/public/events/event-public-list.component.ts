@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { EventService, MedicalEvent, ParticipantStatus, MyParticipation } from '../../../core/services/event.service';
 import { Router, RouterModule } from '@angular/router';
 import { AuthFacade } from '../../../core/services/auth.facade';
+import { UserService } from '../../../core/services/user.service';
 import { catchError, of } from 'rxjs';
 import { Specialization } from '../../../core/user/enums/specialization.enum';
 
@@ -143,12 +144,77 @@ import { Specialization } from '../../../core/user/enums/specialization.enum';
           </div>
         </div>
 
+        <!-- Recommended Events Section -->
+        <div *ngIf="recommendedEvents().length > 0" class="mt-16">
+          <div class="flex items-center gap-3 mb-6">
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-600">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            </span>
+            <h2 class="text-2xl font-bold text-gray-900">Recommandés pour vous</h2>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div *ngFor="let ev of recommendedEvents(); let i = index" 
+                 [routerLink]="['/events', ev.id]"
+                 class="group bg-white rounded-2xl border border-orange-200 overflow-hidden cursor-pointer hover:border-orange-300 hover:shadow-lg hover:shadow-orange-100/50 transition-all duration-300 flex flex-col h-full animate-fade-in"
+                 [style.animation-delay]="(i * 0.05) + 's'">
+              <!-- Similar to standard event card, maybe a bit simplified -->
+              <div class="relative h-48 w-full overflow-hidden bg-gray-100 border-b border-gray-100">
+                <img *ngIf="ev.bannerUrl" [src]="ev.bannerUrl" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Event Thumbnail"/>
+                <div *ngIf="!ev.bannerUrl" class="w-full h-full bg-orange-50 flex items-center justify-center text-orange-300">
+                  <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div class="absolute top-4 left-4 z-[50]">
+                   <span class="px-2.5 py-1 bg-white/95 backdrop-blur text-xs font-bold text-orange-800 rounded-md border border-orange-100 shadow-sm uppercase tracking-wider">
+                      {{ formatLabel(ev.specialization || 'Général') }}
+                   </span>
+                </div>
+              </div>
+              <div class="p-6 flex-1 flex flex-col">
+                <div class="flex items-center text-xs text-gray-500 font-medium mb-2">
+                   <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                   {{ ev.eventDate | date:'dd MMM à HH:mm' }}
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2 leading-snug group-hover:text-orange-600 transition-colors line-clamp-2">
+                  {{ ev.title }}
+                </h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Empty State -->
         <div *ngIf="filteredEvents().length === 0" class="py-32 text-center bg-white rounded-2xl border border-gray-200 shadow-sm mt-8">
            <div class="text-4xl mb-4 text-gray-300">
               <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
            </div>
            <p class="text-gray-500 font-medium text-sm">Aucune conférence disponible pour le moment</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interests Modal -->
+    <div *ngIf="showInterestModal()" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-fade-in">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-teal-50">
+          <h2 class="text-2xl font-bold text-teal-900">Personnalisez votre expérience</h2>
+          <button (click)="skipInterests()" class="text-teal-600 hover:text-teal-900 font-medium text-sm transition-colors">Plus tard</button>
+        </div>
+        <div class="p-6 overflow-y-auto">
+          <p class="text-gray-600 mb-6">Sélectionnez les domaines médicaux qui vous intéressent pour recevoir des recommandations personnalisées de conférences et événements.</p>
+          <div class="flex flex-wrap gap-3">
+            <button *ngFor="let tag of availableTags" 
+                    (click)="toggleTag(tag)"
+                    [class]="selectedInterests().includes(tag) ? 'bg-teal-600 text-white border-teal-600 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300 hover:bg-teal-50'"
+                    class="px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200">
+              {{ tag }}
+            </button>
+          </div>
+        </div>
+        <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+          <button (click)="saveInterests()" [disabled]="selectedInterests().length === 0"
+                  class="px-6 py-2.5 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
+            Enregistrer mes préférences
+          </button>
         </div>
       </div>
     </div>
@@ -161,14 +227,25 @@ import { Specialization } from '../../../core/user/enums/specialization.enum';
 })
 export class EventPublicListComponent implements OnInit {
   private eventService = inject(EventService);
+  private userService = inject(UserService);
   private authFacade = inject(AuthFacade);
   
   events = signal<MedicalEvent[]>([]);
   participations = signal<Map<number, MyParticipation>>(new Map());
+  recommendedEvents = signal<MedicalEvent[]>([]);
 
   searchQuery = signal('');
   selectedSpecialization = signal('');
   specializations = Object.values(Specialization);
+
+  showInterestModal = signal(false);
+  selectedInterests = signal<string[]>([]);
+  availableTags = [
+    'Cardiologie', 'Neurologie', 'Pédiatrie', 'Oncologie', 
+    'Médecine d\'urgence', 'Télémédecine', 'Santé publique', 
+    'Nutrition', 'Santé mentale', 'Chirurgie', 'Dermatologie',
+    'Recherche médicale', 'Gynécologie', 'Médecine interne'
+  ];
 
   filteredEvents = computed(() => {
     const q = this.searchQuery().toLowerCase();
@@ -181,11 +258,49 @@ export class EventPublicListComponent implements OnInit {
   });
 
   ngOnInit() {
-    // Re-fetch events whenever the user state changes to ensure correct visibility
-    this.authFacade.currentUser$.subscribe(() => {
+    this.authFacade.currentUser$.subscribe(user => {
       this.refreshEvents();
+      if (user && user.userType) { // only for authenticated users
+        const interests = user.interests || [];
+        if (interests.length === 0 && !sessionStorage.getItem('interests_skipped')) {
+          this.showInterestModal.set(true);
+        } else if (interests.length > 0) {
+          this.loadRecommended();
+        }
+      }
     });
     this.loadParticipations();
+  }
+
+  loadRecommended() {
+    this.eventService.getRecommendedEvents().subscribe({
+      next: (events) => this.recommendedEvents.set(events.slice(0, 3)), // show top 3
+      error: (err) => console.error('Failed to load recommended events', err)
+    });
+  }
+
+  toggleTag(tag: string) {
+    const current = this.selectedInterests();
+    if (current.includes(tag)) {
+      this.selectedInterests.set(current.filter(t => t !== tag));
+    } else {
+      this.selectedInterests.set([...current, tag]);
+    }
+  }
+
+  skipInterests() {
+    sessionStorage.setItem('interests_skipped', 'true');
+    this.showInterestModal.set(false);
+  }
+
+  saveInterests() {
+    this.userService.updateInterests(this.selectedInterests()).subscribe({
+      next: () => {
+        this.showInterestModal.set(false);
+        this.loadRecommended();
+      },
+      error: (err) => console.error('Failed to update interests', err)
+    });
   }
 
   refreshEvents() {

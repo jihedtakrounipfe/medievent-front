@@ -63,6 +63,11 @@ import * as QRCode from 'qrcode';
             </div>
             <h1 class="text-4xl font-black text-gray-950 mb-4 tracking-tight leading-tight">{{ event()?.title }}</h1>
             <p class="text-lg text-gray-500 max-w-3xl leading-relaxed">{{ event()?.description }}</p>
+            <div *ngIf="event()?.tags && event()?.tags?.length" class="mt-6 flex flex-wrap gap-2">
+               <span *ngFor="let tag of event()?.tags" class="px-3 py-1.5 rounded-full bg-white/60 backdrop-blur border border-gray-200 text-teal-800 text-[10px] font-bold uppercase tracking-wider">
+                 #{{ tag }}
+               </span>
+            </div>
           </div>
         </div>
 

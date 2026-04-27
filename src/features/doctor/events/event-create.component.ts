@@ -162,7 +162,7 @@ export function futureDateValidator(): ValidatorFn {
                     </div>
                  </div>
 
-                 <!-- Audience -->
+                  <!-- Audience -->
                  <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div>
                       <p class="text-sm font-bold text-gray-900">Audience Publique</p>
@@ -171,6 +171,19 @@ export function futureDateValidator(): ValidatorFn {
                     <button type="button" (click)="toggleAudience()" [class.bg-teal-500]="eventForm.value.targetAudience === 'PUBLIC'" [class.bg-gray-300]="eventForm.value.targetAudience !== 'PUBLIC'" class="w-12 h-6 rounded-full relative transition-colors duration-300">
                        <div [class.translate-x-6]="eventForm.value.targetAudience === 'PUBLIC'" class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300"></div>
                     </button>
+                 </div>
+
+                 <!-- Tags -->
+                 <div class="pt-6 border-t border-gray-100">
+                   <label class="block text-sm font-medium text-gray-700 mb-3">Tags & Catégories <span class="text-xs text-gray-400 font-normal ml-2">(Pour les recommandations)</span></label>
+                   <div class="flex flex-wrap gap-2">
+                     <button *ngFor="let tag of availableTags" type="button"
+                             (click)="toggleTag(tag)"
+                             [class]="selectedTags().includes(tag) ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300 hover:bg-teal-50'"
+                             class="px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-200">
+                       {{ tag }}
+                     </button>
+                   </div>
                  </div>
               </div>
             </div>
@@ -395,10 +408,28 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   private searchSubject = new Subject<string>();
 
   specializations = Object.values(Specialization);
+  
+  availableTags = [
+    'Cardiologie', 'Neurologie', 'Pédiatrie', 'Oncologie', 
+    'Médecine d\'urgence', 'Télémédecine', 'Santé publique', 
+    'Nutrition', 'Santé mentale', 'Chirurgie', 'Dermatologie',
+    'Recherche médicale', 'Gynécologie', 'Médecine interne'
+  ];
+  selectedTags = signal<string[]>([]);
 
   formatLabel(s: string | undefined | null): string {
     if (!s) return '';
     return s.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  toggleTag(tag: string) {
+    const current = this.selectedTags();
+    if (current.includes(tag)) {
+      this.selectedTags.set(current.filter(t => t !== tag));
+    } else {
+      this.selectedTags.set([...current, tag]);
+    }
+    this.eventForm.patchValue({ tags: this.selectedTags() as any });
   }
 
   private map:    any = null;
@@ -417,7 +448,8 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     speakerName:    [''], // External Guest Name
     speakerBio:     [''], // External Guest Bio
     agenda:         [''],
-    bannerUrl:      ['', [Validators.pattern('https?://.*')]]
+    bannerUrl:      ['', [Validators.pattern('https?://.*')]],
+    tags:           [[]]
   });
 
   ngOnInit(): void {
@@ -458,8 +490,13 @@ export class EventCreateComponent implements OnInit, AfterViewInit, OnDestroy {
             speakerName: ev.speakerName,
             speakerBio: ev.speakerBio,
             agenda: ev.agenda,
-            bannerUrl: ev.bannerUrl
+            bannerUrl: ev.bannerUrl,
+            tags: ev.tags || []
           });
+
+          if (ev.tags && ev.tags.length > 0) {
+            this.selectedTags.set(ev.tags);
+          }
 
           // Restore speakers
           if (ev.speakers && ev.speakers.length > 0) {

@@ -45,6 +45,7 @@ export interface MedicalEvent {
     specialization?: string;
     profilePicture?: string;
   }[];
+  tags?: string[];
 }
 
 export interface MyParticipation {
@@ -61,6 +62,10 @@ export class EventService {
   // Public
   getActiveEvents(): Observable<MedicalEvent[]> {
     return this.http.get<MedicalEvent[]>(`${this.API}/events/active`);
+  }
+
+  getRecommendedEvents(): Observable<MedicalEvent[]> {
+    return this.http.get<MedicalEvent[]>(`${this.API}/events/participation/recommended`);
   }
 
   getEventById(id: number): Observable<MedicalEvent> {

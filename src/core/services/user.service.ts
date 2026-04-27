@@ -19,6 +19,10 @@ export class UserService {
     return this.http.get<AppUser>(`${this.baseV1}/users/${id}`);
   }
 
+  updateInterests(interests: string[]): Observable<void> {
+    return this.http.put<void>(`${this.baseV1}/users/interests`, interests);
+  }
+
   searchUsers(params: {
     name?: string;
     email?: string;

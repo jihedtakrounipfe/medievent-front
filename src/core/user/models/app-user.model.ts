@@ -25,4 +25,5 @@ export interface AppUser {
   emergencyContactPhone?: string;
   biometricEnrolled?: boolean;
   twoFactorEnabled?: boolean;
+  interests?: string[];
 }
