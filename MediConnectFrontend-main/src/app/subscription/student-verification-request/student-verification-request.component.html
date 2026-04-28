@@ -1,0 +1,160 @@
+<div class="min-h-full bg-gray-50 py-12">
+  <div class="mx-auto w-full max-w-5xl px-8">
+    <div class="mb-10 text-center">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-teal-600">Verification Status</p>
+      <h2 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">Student Program</h2>
+      <p class="mt-4 text-base text-gray-600">Track your student verification request and unlock premium discounts.</p>
+      <button (click)="startFullAudioTour()" 
+              class="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        🎧🚀 Start Audio Tour
+      </button>
+      <button (click)="describeThisPage()" 
+              class="mt-6 ml-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+        🎧 Describe This Page
+      </button>
+      @if ((audioTourService.isPlaying$ | async) || (audioTourService.isPaused$ | async)) {
+        <div class="mt-6 ml-4 flex gap-2">
+          <button (click)="audioTourService.pauseOrResume()"
+                  class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium">
+            {{ (audioTourService.isPaused$ | async) ? '▶ Resume' : '⏸ Pause' }}
+          </button>
+          <button (click)="audioTourService.stopTour()"
+                  class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium">
+            ⏹ Stop
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="overflow-hidden rounded-[2.5rem] bg-white shadow-xl ring-1 ring-gray-900/5">
+      <div class="p-10 sm:p-16">
+        @if (loading) {
+          <div class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-teal-600"></div>
+            <p class="mt-6 text-sm font-bold text-gray-500 uppercase tracking-widest">Checking secure database...</p>
+          </div>
+        } @else {
+          @if (currentState === 'NOT_SUBMITTED') {
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+               <div class="rounded-3xl bg-gray-50 p-8 text-gray-400">
+                  <svg class="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+               </div>
+               <h3 class="mt-8 text-2xl font-black text-gray-900">No application found</h3>
+               <p class="mt-4 text-gray-500 max-w-sm">You haven't submitted a student verification request yet. Applications are typically processed in under 5 minutes.</p>
+               <button (click)="applyForDiscount()" class="mt-10 rounded-full bg-teal-600 px-10 py-4 text-sm font-black text-white shadow-lg transition hover:bg-teal-700 hover:-translate-y-0.5">
+                  Start Application
+               </button>
+            </div>
+          }
+
+          @if (currentState === 'PENDING') {
+            <div class="relative overflow-hidden rounded-[2rem] bg-amber-50 p-10 ring-1 ring-amber-200">
+               <div class="flex flex-col gap-8 lg:flex-row lg:items-center">
+                  <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-600 shadow-sm">
+                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  </div>
+                  <div class="flex-1">
+                     <div class="flex items-center gap-3">
+                        <h3 class="text-2xl font-black text-amber-900">Review in Progress</h3>
+                        <span class="rounded-full bg-amber-100 px-3 py-0.5 text-[10px] font-black text-amber-700 uppercase tracking-widest">Pending</span>
+                     </div>
+                     <p class="mt-2 text-sm font-medium text-amber-800/80 leading-relaxed">
+                        Our AI system is currently validating your credentials. This usually takes between 3 to 5 minutes.
+                     </p>
+                  </div>
+               </div>
+
+               <div class="mt-10">
+                  <div class="mb-2 flex justify-between text-[10px] font-black uppercase tracking-widest text-amber-700">
+                     <span>AI Analysis Stage</span>
+                     <span>{{ progress }}%</span>
+                  </div>
+                  <div class="h-2 w-full overflow-hidden rounded-full bg-white/50">
+                    <div class="h-full bg-amber-500 transition-all duration-1000" [style.width.%]="progress"></div>
+                  </div>
+               </div>
+
+               <div class="mt-10 flex gap-3">
+                  <button (click)="refreshStatus()" class="rounded-xl bg-amber-600 px-6 py-3 text-xs font-black text-white transition hover:bg-amber-700">Refresh Status</button>
+                  <button (click)="goToPlans()" class="rounded-xl border border-amber-200 bg-white px-6 py-3 text-xs font-bold text-amber-800 transition hover:bg-amber-50">Back to Plans</button>
+               </div>
+            </div>
+          }
+
+          @if (currentState === 'APPROVED') {
+            <div class="relative overflow-hidden rounded-[2rem] bg-emerald-50 p-10 ring-1 ring-emerald-200">
+               <div class="flex flex-col gap-8 lg:flex-row lg:items-center">
+                  <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
+                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                  <div class="flex-1">
+                     <div class="flex items-center gap-3">
+                        <h3 class="text-2xl font-black text-emerald-900">Verification Active</h3>
+                        <span class="rounded-full bg-emerald-100 px-3 py-0.5 text-[10px] font-black text-emerald-700 uppercase tracking-widest">Approved</span>
+                     </div>
+                     <p class="mt-2 text-sm font-medium text-emerald-800/80 leading-relaxed">
+                        Congratulations! Your student identity has been verified. You now have access to specialized pricing.
+                     </p>
+                  </div>
+               </div>
+
+               <div class="mt-10 grid gap-4 sm:grid-cols-2">
+                  <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-emerald-100">
+                    <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Locked Discount</p>
+                    <p class="mt-1 text-xl font-black text-gray-900">20% Off Premium</p>
+                  </div>
+                  <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-emerald-100">
+                    <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Valid Until</p>
+                    <p class="mt-1 text-xl font-black text-gray-900">{{ approvedDaysRemaining }} Days Left</p>
+                  </div>
+               </div>
+
+               <div class="mt-10 flex gap-3">
+                   <button (click)="goToCheckout()" 
+        [disabled]="isAlreadySubscribed"
+        class="rounded-xl px-6 py-3 text-xs font-black text-white transition
+               bg-emerald-600 hover:bg-emerald-700
+               disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">
+  {{ isAlreadySubscribed ? 'Already Subscribed' : 'Proceed to Checkout' }}
+</button>
+                   <button (click)="goToPlans()" class="rounded-xl border border-emerald-200 bg-white px-6 py-3 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50">View All Plans</button>
+               </div>
+            </div>
+          }
+
+          @if (currentState === 'REJECTED') {
+            <div class="relative overflow-hidden rounded-[2rem] bg-rose-50 p-10 ring-1 ring-rose-200">
+               <div class="flex flex-col gap-8 lg:flex-row lg:items-center">
+                  <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-rose-600 shadow-sm">
+                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </div>
+                  <div class="flex-1">
+                     <div class="flex items-center gap-3">
+                        <h3 class="text-2xl font-black text-rose-900">Verification Rejected</h3>
+                        <span class="rounded-full bg-rose-100 px-3 py-0.5 text-[10px] font-black text-rose-700 uppercase tracking-widest">Rejected</span>
+                     </div>
+                     <p class="mt-2 text-sm font-medium text-rose-800/80 leading-relaxed">
+                        Unfortunately, your application could not be approved at this time.
+                     </p>
+                  </div>
+               </div>
+
+               @if (status?.rejectionReason) {
+                 <div class="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-rose-100">
+                   <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Reason for Rejection</p>
+                   <p class="mt-2 text-sm font-bold text-gray-900 italic">"{{ status?.rejectionReason }}"</p>
+                 </div>
+               }
+
+               <div class="mt-10 flex gap-3">
+                  <button (click)="reSubmitVerification()" class="rounded-xl bg-rose-600 px-6 py-3 text-xs font-black text-white transition hover:bg-rose-700">Re-submit Application</button>
+                  <button (click)="goToPlans()" class="rounded-xl border border-rose-200 bg-white px-6 py-3 text-xs font-bold text-rose-800 transition hover:bg-rose-50">Back to Plans</button>
+               </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</div>
+

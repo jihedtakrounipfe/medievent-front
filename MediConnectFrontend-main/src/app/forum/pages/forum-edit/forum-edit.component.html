@@ -1,0 +1,1037 @@
+<!-- ═══ MODAL MODIFICATIONS NON SAUVEGARDÉES ═══ -->
+<div *ngIf="showUnsavedModal" class="modal-overlay" (click)="stayOnPage()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-icon-wrap">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#BA7517" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+      </svg>
+    </div>
+    <h2>Modifications non sauvegardées</h2>
+    <p>Vous avez des modifications en cours. Si vous quittez, ces changements seront <strong>perdus définitivement.</strong></p>
+    <div class="modal-actions">
+      <button class="btn-keep" (click)="stayOnPage()">Continuer l'édition</button>
+      <button class="btn-leave" (click)="confirmLeave()">Quitter sans sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ INDICATEUR MODIFICATIONS EN COURS ═══ -->
+<div *ngIf="hasUnsavedChanges && !isLoading" class="unsaved-bar">
+  <span class="unsaved-dot"></span>
+  Modifications non sauvegardées
+</div>
+
+<!-- ═══ PAGE PRINCIPALE ═══ -->
+<div class="forum-edit-container">
+
+  <!-- HEADER -->
+  <div class="detail-header">
+    <div class="header-content">
+      <button (click)="goBack()" class="back-button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Retour au post
+      </button>
+      <div class="header-title">
+        <div class="header-icon">✏️</div>
+        <div>
+          <h1>Modifier la publication</h1>
+          <p>Modifiez votre contenu et mettez à jour</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-content">
+
+    <!-- LOADING -->
+    <div *ngIf="isLoading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Chargement du post...</p>
+    </div>
+
+    <!-- FORM -->
+    <form *ngIf="!isLoading" #editForm="ngForm" (ngSubmit)="submit()" class="edit-form">
+
+      <!-- CATEGORY CARD -->
+      <div class="form-card">
+        <div class="form-card-header">
+          <div class="form-card-label">
+            <span class="label-icon">🏷️</span>
+            <h3>Catégorie <span class="required">*</span></h3>
+          </div>
+        </div>
+        <div class="category-grid">
+          <button *ngFor="let cat of categories" type="button"
+                  (click)="selectCategory(cat.value)"
+                  [ngClass]="form.category === cat.value ? 'category-btn active' : 'category-btn'">
+            <span class="cat-icon">{{ cat.icon }}</span>
+            <span class="cat-name">{{ cat.label }}</span>
+            <span class="cat-desc">{{ cat.desc }}</span>
+          </button>
+        </div>
+        <div *ngIf="isFieldInvalid('category')" class="field-error">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"/>
+          </svg>
+          Veuillez sélectionner une catégorie
+        </div>
+      </div>
+
+      <!-- TITLE CARD -->
+      <div class="form-card">
+        <div class="form-card-header">
+          <div class="form-card-label">
+            <span class="label-icon">📝</span>
+            <h3>Titre <span class="required">*</span></h3>
+          </div>
+          <div class="counter-row">
+            <span class="counter">{{ form.title.length }}/150</span>
+            <span *ngIf="form.title.length >= 10" class="valid-badge">✓ Valide</span>
+          </div>
+        </div>
+        <input type="text"
+               [(ngModel)]="form.title"
+               name="title"
+               required
+               maxlength="150"
+               (input)="validateField('title')"
+               placeholder="Entrez le titre de votre publication..."
+               class="form-input" />
+        <div *ngIf="isFieldInvalid('title')" class="field-error">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"/>
+          </svg>
+          Le titre doit contenir au moins 10 caractères
+        </div>
+        <div class="form-hint">Un titre clair permet d'attirer plus de réponses</div>
+      </div>
+
+      <!-- CONTENT CARD -->
+      <div class="form-card">
+        <div class="form-card-header">
+          <div class="form-card-label">
+            <span class="label-icon">💬</span>
+            <h3>Contenu <span class="required">*</span></h3>
+          </div>
+          <div class="counter-row">
+            <span class="counter">{{ form.content.length }}/5000</span>
+            <span *ngIf="form.content.length >= 20" class="valid-badge">✓ Valide</span>
+          </div>
+        </div>
+        <textarea [(ngModel)]="form.content"
+                  name="content"
+                  required
+                  maxlength="5000"
+                  rows="8"
+                  (input)="validateField('content')"
+                  placeholder="Expliquez votre question, partagez votre conseil ou document..."
+                  class="form-textarea"></textarea>
+        <div *ngIf="isFieldInvalid('content')" class="field-error">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"/>
+          </svg>
+          Le contenu doit contenir au moins 20 caractères
+        </div>
+        <div class="form-hint">Soyez précis et détaillé pour obtenir des réponses pertinentes</div>
+      </div>
+
+      <!-- FILES CARD -->
+      <div class="form-card">
+        <div class="form-card-header">
+          <div class="form-card-label">
+            <span class="label-icon">📎</span>
+            <h3>Fichiers associés</h3>
+          </div>
+          <span class="optional-badge">Optionnel</span>
+        </div>
+
+        <!-- Images -->
+        <div *ngIf="postImages && postImages.length > 0" class="files-group">
+          <div class="files-group-header">
+            <span>🖼️</span> Images ({{ postImages.length }})
+          </div>
+          <div class="files-list">
+            <div *ngFor="let img of postImages; let i = index" class="file-row">
+              <div class="file-thumb img-thumb">
+                <img [src]="img.url" [alt]="img.name" />
+              </div>
+              <div class="file-info">
+                <div class="file-name">{{ img.name }}</div>
+                <div class="file-size">{{ formatFileSize(img.size) }}</div>
+              </div>
+              <button type="button" class="rm-btn" (click)="removeFile('image', i)" title="Supprimer">×</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vidéos -->
+        <div *ngIf="postVideos && postVideos.length > 0" class="files-group">
+          <div class="files-group-header">
+            <span>🎬</span> Vidéos ({{ postVideos.length }})
+          </div>
+          <div class="files-list">
+            <div *ngFor="let video of postVideos; let i = index" class="file-row">
+              <div class="file-thumb video-thumb">
+                <video preload="metadata"><source [src]="video.url" type="video/mp4"></video>
+                <div class="video-play">▶</div>
+              </div>
+              <div class="file-info">
+                <div class="file-name">{{ video.name }}</div>
+                <div class="file-size">{{ formatFileSize(video.size) }}</div>
+              </div>
+              <button type="button" class="rm-btn" (click)="removeFile('video', i)" title="Supprimer">×</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PDFs -->
+        <div *ngIf="postPdfs && postPdfs.length > 0" class="files-group">
+          <div class="files-group-header">
+            <span>📄</span> Documents PDF ({{ postPdfs.length }})
+          </div>
+          <div class="files-list">
+            <div *ngFor="let pdf of postPdfs; let i = index" class="file-row">
+              <div class="file-thumb pdf-thumb">📄</div>
+              <div class="file-info">
+                <div class="file-name">{{ pdf.name }}</div>
+                <div class="file-size">{{ formatFileSize(pdf.size) }}</div>
+              </div>
+              <button type="button" class="rm-btn" (click)="removeFile('pdf', i)" title="Supprimer">×</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="!postImages?.length && !postVideos?.length && !postPdfs?.length" class="empty-files">
+          <span>📂</span> Aucun fichier joint
+        </div>
+
+        <!-- Add files -->
+        <div class="add-files-wrapper">
+          <button type="button" class="add-files-btn" (click)="openFileSelector()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 4v16m8-8H4"/>
+            </svg>
+            Ajouter des fichiers
+          </button>
+          <input type="file" #fileInput multiple style="display:none"
+                 (change)="onFilesSelected($event)"
+                 accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.mkv,.pdf" />
+          <div class="form-hint" style="margin-top:6px">Formats acceptés : JPG, PNG, GIF, MP4, PDF</div>
+        </div>
+      </div>
+
+      <!-- TAGS CARD -->
+      <div class="form-card">
+        <div class="form-card-header">
+          <div class="form-card-label">
+            <span class="label-icon">#️⃣</span>
+            <h3>Tags</h3>
+          </div>
+          <span class="optional-badge">Optionnel</span>
+        </div>
+        <div class="tags-list">
+          <span *ngFor="let tag of form.tags" class="tag-pill">
+            #{{ tag }}
+            <button type="button" class="tag-remove" (click)="removeTag(tag)">×</button>
+          </span>
+        </div>
+        <input #tagInput type="text"
+               placeholder="Ajouter un tag et appuyer sur Entrée"
+               (keydown.enter)="$event.preventDefault(); addTag(tagInput.value); tagInput.value='';"
+               class="form-input" />
+        <div class="form-hint">Les tags aident à catégoriser votre publication</div>
+      </div>
+
+      <!-- FORM ACTIONS -->
+      <div class="form-actions">
+        <button type="button" (click)="goBack()" class="btn-cancel">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+          Annuler
+        </button>
+        <button type="submit" [disabled]="!isFormValid() || isSubmitting" class="btn-submit">
+          <span *ngIf="!isSubmitting">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 13l4 4L19 7"/>
+            </svg>
+            Mettre à jour la publication
+          </span>
+          <span *ngIf="isSubmitting" class="btn-loading">
+            <svg class="spin-icon" viewBox="0 0 24 24" width="16" height="16">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
+              <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            Mise à jour...
+          </span>
+        </button>
+      </div>
+
+      <!-- ERROR BANNER -->
+      <div *ngIf="errorMessage" class="error-banner">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+        </svg>
+        {{ errorMessage }}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<style>
+/* ═══════════════════════════════════════════
+   FORUM EDIT — STYLES AMÉLIORÉS
+   ═══════════════════════════════════════════ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ── CONTAINER ── */
+.forum-edit-container {
+  min-height: 100vh;
+  background: #f8fafc;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* ── UNSAVED BAR ── */
+.unsaved-bar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 40px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #d97706;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  pointer-events: none;
+}
+
+.unsaved-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ── HEADER ── */
+.detail-header {
+  background: linear-gradient(150deg, #0f172a 0%, #1e3a5f 100%);
+  padding: 28px 32px 44px;
+}
+
+.header-content {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 40px;
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 24px;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.back-button:hover {
+  background: rgba(255,255,255,0.18);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon {
+  width: 52px;
+  height: 52px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.header-title h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 5px;
+  letter-spacing: -0.2px;
+}
+
+.header-title p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  margin: 0;
+}
+
+/* ── CONTENT ── */
+.detail-content {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 32px 80px;
+}
+
+/* ── LOADING ── */
+.loading-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #64748b;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #1D9E75;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── FORM ── */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeUp 0.4s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── CARD ── */
+.form-card {
+  background: #ffffff;
+  border: 1px solid #e8edf2;
+  border-radius: 20px;
+  padding: 24px 28px;
+  transition: border-color 0.15s;
+}
+
+.form-card:hover {
+  border-color: #d1d9e0;
+}
+
+.form-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.form-card-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label-icon {
+  font-size: 16px;
+}
+
+.form-card-label h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.required {
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.optional-badge {
+  font-size: 11px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 3px 10px;
+  border-radius: 40px;
+}
+
+.counter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.counter {
+  font-size: 11px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 40px;
+}
+
+.valid-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 3px 8px;
+  border-radius: 40px;
+}
+
+/* ── INPUTS ── */
+.form-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: #fafbfc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #1D9E75;
+  box-shadow: 0 0 0 3px rgba(29,158,117,0.1);
+  background: #ffffff;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 11px 14px;
+  background: #fafbfc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.65;
+  resize: vertical;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #1D9E75;
+  box-shadow: 0 0 0 3px rgba(29,158,117,0.1);
+  background: #ffffff;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 7px;
+}
+
+/* ── CATEGORIES ── */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.category-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  background: #fafbfc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.category-btn:hover {
+  border-color: #1D9E75;
+  background: #f0fdf9;
+  transform: translateY(-1px);
+}
+
+.category-btn.active {
+  background: #EAF3DE;
+  border: 1.5px solid #97C459;
+}
+
+.cat-icon {
+  font-size: 22px;
+}
+
+.cat-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.category-btn.active .cat-name {
+  color: #3B6D11;
+}
+
+.cat-desc {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.category-btn.active .cat-desc {
+  color: #639922;
+}
+
+/* ── TAGS ── */
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  border-radius: 40px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #2563eb;
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.tag-remove:hover {
+  opacity: 1;
+  color: #ef4444;
+}
+
+/* ── FILES ── */
+.files-group {
+  background: #f8fafc;
+  border: 1px solid #e8edf2;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.files-group-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 10px;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e8edf2;
+  border-radius: 10px;
+  padding: 8px 10px;
+  transition: border-color 0.15s;
+}
+
+.file-row:hover {
+  border-color: #cbd5e1;
+}
+
+.file-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.img-thumb { background: #e1f5ee; }
+.img-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.video-thumb {
+  position: relative;
+  background: #1e293b;
+}
+
+.video-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: white;
+  pointer-events: none;
+}
+
+.pdf-thumb { background: #fef3c7; }
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.rm-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.rm-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.empty-files {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px;
+  color: #94a3b8;
+  font-size: 13px;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  border-radius: 14px;
+  margin-bottom: 14px;
+}
+
+.add-files-wrapper {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.add-files-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 40px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.add-files-btn:hover {
+  border-color: #1D9E75;
+  color: #1D9E75;
+  background: #f0fdf9;
+}
+
+/* ── FORM ACTIONS ── */
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 480px) {
+  .form-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.btn-cancel:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 24px;
+  background: #1D9E75;
+  border: none;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(29,158,117,0.25);
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #0F6E56;
+  box-shadow: 0 4px 14px rgba(29,158,117,0.3);
+  transform: translateY(-1px);
+}
+
+.btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spin-icon {
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── ERRORS ── */
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 28px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  animation: modalIn 0.25s ease;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-icon-wrap {
+  width: 48px;
+  height: 48px;
+  background: #FAEEDA;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+}
+
+.modal-card h2 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 10px;
+}
+
+.modal-card p {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 22px;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-keep {
+  padding: 11px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.btn-keep:hover {
+  background: #e2e8f0;
+}
+
+.btn-leave {
+  padding: 11px;
+  background: #E24B4A;
+  border: none;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.btn-leave:hover {
+  background: #A32D2D;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .detail-header {
+    padding: 20px 20px 32px;
+  }
+
+  .detail-content {
+    padding: 20px 16px 48px;
+  }
+
+  .form-card {
+    padding: 18px 18px;
+  }
+}
+</style>

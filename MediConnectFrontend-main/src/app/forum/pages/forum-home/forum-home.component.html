@@ -1,0 +1,794 @@
+<!-- MAIN CONTENT -->
+<div class="forum-shell">
+  <div class="forum-inner">
+
+    <!-- LEFT COLUMN -->
+    <div class="forum-left">
+
+      <section class="hero-banner">
+        <div class="hero-background">
+          <div class="hero-gradient-1"></div>
+          <div class="hero-gradient-2"></div>
+        </div>
+        <div class="hero-content">
+          <div class="hero-badge">✨ Forum médical confidentiel</div>
+          <h1>Vos questions, nos réponses</h1>
+          <p>Une communauté de patients et de professionnels de santé réunis pour partager, apprendre et s'entraide.</p>
+          <div class="hero-actions">
+            <button class="btn-new" (click)="newPost()">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Créer un post
+            </button>
+            <button class="hero-secondary" (click)="filterByCategory('QUESTION')">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Questions populaires
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Search + Voice + Language Selector -->
+      <div class="toolbar">
+        <div class="search-panel">
+          <div class="search-input-row">
+            <div class="search-input-group">
+              <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+              </svg>
+              <input
+                type="text"
+                [(ngModel)]="searchQuery"
+                (input)="onSearch()"
+                placeholder="Rechercher un sujet, symptôme..."
+                class="search-field"
+                appSpeakOnHover
+                speakText="Rechercher des discussions médicales"
+              />
+            </div>
+            <app-voice-search (voiceQuery)="onVoiceSearch($event)"></app-voice-search>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="language-selector" (mouseleave)="showLanguageMenu = false">
+            <button class="lang-btn" (click)="showLanguageMenu = !showLanguageMenu" [disabled]="isTranslating">
+              <span class="lang-flag">{{ getCurrentLanguageFlag() }}</span>
+              <span class="lang-name">{{ getCurrentLanguageName() }}</span>
+              <svg class="lang-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+              <span *ngIf="isTranslating" class="lang-spinner"></span>
+            </button>
+            
+            <div class="lang-dropdown" *ngIf="showLanguageMenu">
+              <button *ngFor="let lang of availableLanguages" 
+                      (click)="changeLanguage(lang.code)"
+                      class="lang-option"
+                      [class.active]="lang.code === currentLanguage">
+                <span class="lang-flag">{{ lang.flag }}</span>
+                <span class="lang-name">{{ lang.name }}</span>
+                <span *ngIf="lang.code === currentLanguage" class="lang-check">✓</span>
+              </button>
+            </div>
+          </div>
+
+          <button (click)="newPost()" class="btn-new" appSpeakOnHover speakText="Créer un nouveau post">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nouveau post
+          </button>
+
+          <app-theme-toggle></app-theme-toggle>
+        </div>
+      </div>
+
+      <!-- Translation Tools - Compact version -->
+      <div class="translation-tools">
+        <div class="translation-toggle-group">
+          <button type="button" class="btn-secondary" (click)="toggleSelectionMode()">
+            {{ selectionMode ? '✓ Mode sélection actif' : '⚙️ Traduction' }}
+          </button>
+          <button type="button" class="btn-new" (click)="translateAllVisible()" [disabled]="filteredPosts.length === 0 || isTranslating">
+            🌐 Tout en {{ pendingTargetLanguage === 'en' ? 'anglais' : pendingTargetLanguage === 'ar' ? 'arabe' : 'français' }}
+          </button>
+        </div>
+        
+        <div *ngIf="selectionMode" class="selection-panel">
+          <label class="selection-language">
+            Langue :
+            <select [(ngModel)]="pendingTargetLanguage">
+              <option *ngFor="let lang of availableLanguages" [value]="lang.code">{{ lang.name }}</option>
+            </select>
+          </label>
+          <button type="button" class="btn-secondary" (click)="toggleSelectAll()">
+            {{ allPostsSelected ? '✓ Tous' : 'Tous' }} ({{ selectedPostIds.size }}/{{ filteredPosts.length }})
+          </button>
+          <button type="button" class="btn-new" (click)="translateSelected()" [disabled]="selectedPostIds.size === 0 || isTranslating">
+            ✓ Traduire {{ selectedPostIds.size }}
+          </button>
+        </div>
+      </div>
+
+      <!-- BARRE DE PROGRESSION DE TRADUCTION -->
+      <div *ngIf="isTranslating && translationTotal > 0" class="translation-progress-bar">
+        <div class="progress-container">
+          <div class="progress-fill" [style.width.%]="(translationProgress / translationTotal) * 100"></div>
+        </div>
+        <p class="progress-text">
+          <span class="progress-icon">🌐</span>
+          Traduction en cours... {{ translationProgress }}/{{ translationTotal }}
+        </p>
+      </div>
+
+      <!-- Smart Category Tabs -->
+      <div class="cat-tabs">
+        <button
+          *ngFor="let cat of categories"
+          (click)="filterByCategory(cat.value)"
+          [ngClass]="'cat-tab ' + (activeCategory === cat.value ? 'active' : '')"
+          appSpeakOnHover
+          [speakText]="'Catégorie ' + cat.label"
+        >
+          <span class="cat-icon">{{ cat.icon }}</span>
+          <span class="cat-text">{{ cat.label }}</span>
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="skeleton-list">
+        <div *ngFor="let i of [1,2,3]" class="skeleton"></div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && filteredPosts.length === 0" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3 appSpeakOnHover speakText="Aucun post trouvé">Aucun post trouvé</h3>
+        <p appSpeakOnHover speakText="Essayez d'autres mots-clés ou créez le premier post">
+          Essayez d'autres mots-clés ou créez le premier post !
+        </p>
+      </div>
+
+      <!-- Posts List -->
+      <div *ngIf="!isLoading" class="post-list">
+        <div
+          *ngFor="let post of filteredPosts"
+          (click)="selectionMode ? togglePostSelection(post.id, $event) : openPost(post.id)"
+          class="post-card"
+          [style.border-left-color]="getAccentColor(post.category)">
+
+          <div *ngIf="selectionMode" class="card-selector">
+            <label class="post-select">
+              <input
+                type="checkbox"
+                [checked]="selectedPostIds.has(post.id)"
+                (click)="$event.stopPropagation()"
+                (change)="togglePostSelection(post.id, $event)"
+              />
+              <span>{{ selectedPostIds.has(post.id) ? '✔' : '' }}</span>
+            </label>
+          </div>
+
+          <div class="post-inner">
+            <div class="post-main">
+              <!-- Badges -->
+              <div class="post-badges">
+                <span class="badge" 
+                      [ngClass]="getCatClasses(post.category)"
+                      appSpeakOnHover 
+                      [speakText]="'Catégorie: ' + getCatLabel(post.category)">
+                  {{ getCatIcon(post.category) }} {{ getCatLabel(post.category) }}
+                </span>
+                <span class="badge badge-sentiment" [ngClass]="getSentimentBadgeClass(post)">
+                  {{ getSentimentIcon(post) }} {{ getSentimentLabel(post) }}
+                </span>
+                <span *ngIf="post.isVerifiedByDoctor" 
+                      class="badge badge-verified"
+                      appSpeakOnHover 
+                      speakText="Vérifié par un médecin">
+                  <span class="badge-dot"></span>
+                  Vérifié médecin
+                </span>
+                <span *ngIf="post.pinned" 
+                      class="badge badge-pinned"
+                      appSpeakOnHover 
+                      speakText="Post épinglé">
+                  📌 Épinglé
+                </span>
+              </div>
+
+              <!-- Tags -->
+              <div *ngIf="post.tags?.length" class="post-tags">
+                <span *ngFor="let tag of post.tags" 
+                      class="post-tag"
+                      appSpeakOnHover 
+                      [speakText]="'Tag: ' + tag">
+                  #{{ tag }}
+                </span>
+              </div>
+
+              <!-- Title with translation -->
+              <h3 class="post-title" 
+                  appSpeakOnHover 
+                  [speakText]="getDisplayText(post, 'title')" 
+                  [speakRate]="0.9">
+                {{ getDisplayText(post, 'title') }}
+                <span *ngIf="hasTranslation(post, 'title')" class="lang-indicator" 
+                      [title]="'Traduit en ' + (currentLanguage === 'en' ? 'anglais' : 'arabe')">
+                  {{ currentLanguage === 'en' ? '🇬🇧' : '🇸🇦' }}
+                </span>
+              </h3>
+
+              <!-- Content Preview with translation -->
+              <p class="post-excerpt" 
+                 appSpeakOnHover 
+                 [speakText]="getDisplayText(post, 'content')" 
+                 [speakDelay]="500">
+                {{ getDisplayText(post, 'content') }}
+              </p>
+            </div>
+
+            <div class="post-media-block">
+              <!-- Images -->
+              <div *ngIf="post.images && post.images.length > 0" class="post-media">
+                <div class="media-preview">
+                  <ng-container *ngFor="let img of post.images.slice(0, 3); let idx = index">
+                    <div class="media-item image-item" (click)="$event.stopPropagation(); openMediaGallery(post, idx, 'image')">
+                      <img [src]="img" [alt]="post.title" class="media-thumb" loading="lazy">
+                      <div class="image-overlay">
+                        <div class="media-overlay-actions">
+                          <span class="media-overlay-icon">🔍</span>
+                          <span class="media-overlay-icon">⟲</span>
+                          <span class="media-overlay-label">Zoom • Rotation</span>
+                        </div>
+                      </div>
+                      <span *ngIf="post.images.length > 3 && idx === 2" class="more-media">
+                        +{{ post.images.length - 3 }}
+                      </span>
+                    </div>
+                  </ng-container>
+                </div>
+              </div>
+
+              <!-- Vidéos -->
+              <div *ngIf="post.videos && post.videos.length > 0" class="post-media">
+                <div class="media-preview">
+                  <ng-container *ngFor="let video of post.videos.slice(0, 2); let idx = index">
+                    <div class="media-item video-item" (click)="$event.stopPropagation(); openMediaGallery(post, idx, 'video')">
+                      <video class="media-thumb" preload="metadata">
+                        <source [src]="video" type="video/mp4">
+                      </video>
+                      <div class="video-play-icon">▶️</div>
+                      <div class="image-overlay">
+                        <div class="media-overlay-actions">
+                          <span class="media-overlay-icon">🔍</span>
+                          <span class="media-overlay-icon">⟲</span>
+                          <span class="media-overlay-label">Zoom • Rotation</span>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-container>
+                  <div *ngIf="post.videos.length > 2" class="media-item more-video">
+                    +{{ post.videos.length - 2 }} vidéo(s)
+                  </div>
+                </div>
+              </div>
+
+              <!-- PDFs -->
+              <div *ngIf="post.pdfs && post.pdfs.length > 0" class="post-media pdf-list">
+                <div *ngFor="let pdf of post.pdfs.slice(0, 3)" class="pdf-item" (click)="$event.stopPropagation(); openPdf(pdf.url)">
+                  <span class="pdf-icon">📄</span>
+                  <span class="pdf-name">{{ pdf.name || 'Document PDF' }}</span>
+                </div>
+                <div *ngIf="post.pdfs.length > 3" class="more-pdf">
+                  +{{ post.pdfs.length - 3 }} PDF(s)
+                </div>
+              </div>
+            </div>
+
+            <!-- Meta -->
+            <div class="post-meta">
+              <div class="author-info">
+                <div class="author-avatar" 
+                     [ngClass]="post.author.role === 'DOCTOR' ? 'avatar-doctor' : 'avatar-patient'"
+                     appSpeakOnHover 
+                     [speakText]="'Initiales ' + (post.author.initials || '')">
+                  {{ post.author.initials || '??' }}
+                </div>
+                <span class="author-name" 
+                      appSpeakOnHover 
+                      [speakText]="post.author.fullName || 'Anonyme'">
+                  {{ post.author.fullName || 'Anonyme' }}
+                </span>
+                <span *ngIf="post.author.role === 'DOCTOR'" 
+                      class="author-role-badge"
+                      appSpeakOnHover 
+                      speakText="Médecin">
+                  Médecin
+                </span>
+              </div>
+              <span class="post-date" 
+                    appSpeakOnHover 
+                    [speakText]="'Publié le ' + (post.createdAt | date:'dd MMM yyyy')">
+                {{ post.createdAt | date:'dd MMM yyyy' }}
+              </span>
+              <div class="post-stats">
+                <span class="stat" appSpeakOnHover [speakText]="post.viewCount + ' vues'">
+                  👁 {{ post.viewCount }}
+                </span>
+                <span class="stat" appSpeakOnHover [speakText]="(post.commentCount || 0) + ' commentaires'">
+                  💬 {{ post.commentCount || 0 }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Réactions et sauvegarde -->
+            <div class="post-actions">
+              <div class="reaction-bar">
+                <button type="button" *ngFor="let emoji of reactionEmojis"
+                        (click)="toggleReaction(post, emoji, $event)"
+                        class="reaction-btn"
+                        [class.active]="getUserReaction(post.id) === emoji">
+                  <span class="emoji">{{ emoji }}</span>
+                  <span class="count" *ngIf="getReactionCount(post.id, emoji) > 0">{{ getReactionCount(post.id, emoji) }}</span>
+                </button>
+              </div>
+              <button (click)="toggleSave(post, $event)" 
+                      class="save-btn"
+                      [class.active]="isPostSaved(post.id)">
+                <span>{{ isPostSaved(post.id) ? 'Enregistré' : 'Enregistrer' }}</span>
+              </button>
+              <button (click)="togglePin(post, $event)"
+                      class="save-btn pin-btn"
+                      [class.active]="post.pinned"
+                      [disabled]="isPinningPostId === post.id">
+                <span>{{ post.pinned ? 'Désépingler' : 'Épingler' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGINATION -->
+      <div class="pagination-shell">
+        <button class="pagination-nav-btn"
+                type="button"
+                (click)="goToPostPage(currentPage - 1)"
+                [disabled]="currentPage === 0"
+                aria-label="Page précédente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+          <span>Précédent</span>
+        </button>
+
+        <div class="pagination-pages">
+          <button *ngFor="let page of getVisiblePostPages()"
+                  type="button"
+                  class="pagination-page-btn"
+                  [class.active]="page === currentPage"
+                  (click)="goToPostPage(page)">
+            {{ page + 1 }}
+          </button>
+        </div>
+
+        <button class="pagination-nav-btn"
+                type="button"
+                (click)="goToPostPage(currentPage + 1)"
+                [disabled]="currentPage >= totalPages - 1"
+                aria-label="Page suivante">
+          <span>Suivant</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+      </div>
+
+      <div *ngIf="allPostsLoaded && totalPosts > pageSize" class="post-all-loaded-message">
+        ✅ Toutes les publications sont chargées
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="sidebar">
+      <!-- Stats -->
+      <div class="sidebar-card stats-shell">
+        <div class="sidebar-card-head">
+          <div>
+            <h3 appSpeakOnHover speakText="Statistiques du forum">📊 Statistiques</h3>
+            <p class="sidebar-subtitle">Vue d’ensemble du forum en temps réel</p>
+          </div>
+          <span class="stats-pill">Actif</span>
+        </div>
+        <div class="sidebar-card-body">
+          <div class="stats-overview">
+            <div class="stat-card">
+              <div class="stat-number teal">{{ posts.length }}</div>
+              <div class="stat-label">Posts</div>
+              <div class="stat-bar"><div class="stat-fill" [style.width.%]="getPostsProgress()"></div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number emerald">3</div>
+              <div class="stat-label">Médecins</div>
+              <div class="stat-bar"><div class="stat-fill" [style.width.%]="75"></div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number blue">47</div>
+              <div class="stat-label">Membres</div>
+              <div class="stat-bar"><div class="stat-fill" [style.width.%]="getMembersProgress()"></div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number violet">12</div>
+              <div class="stat-label">Réponses</div>
+              <div class="stat-bar"><div class="stat-fill" [style.width.%]="60"></div></div>
+            </div>
+          </div>
+          <div class="stats-mini">
+            <div class="mini-item"><span>🔥</span> Top sujet : douleur</div>
+            <div class="mini-item"><span>⚡</span> 8 discussions actives</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SENTIMENT ANALYTICS -->
+      <div class="sidebar-card sentiment-card">
+        <div class="sidebar-card-head">
+          <div>
+            <h3 appSpeakOnHover speakText="Analyse de sentiment avancée">🧠 Analyse de sentiment</h3>
+            <p class="sidebar-subtitle">Lecture émotionnelle des posts visibles</p>
+          </div>
+          <span class="stats-pill" *ngIf="sentimentDashboard">IA</span>
+        </div>
+        <div class="sidebar-card-body" *ngIf="sentimentDashboard; else sentimentLoading">
+          <div class="sentiment-summary">
+            <div class="sentiment-score">
+              <div class="sentiment-score-label">Score moyen</div>
+              <div class="sentiment-score-value" [ngClass]="getSentimentScoreClass(sentimentDashboard.averageScore)">
+                {{ sentimentDashboard.averageScore | number:'1.2-2' }}
+              </div>
+              <div class="sentiment-score-bar">
+                <div class="sentiment-score-fill" [style.width.%]="(sentimentDashboard.averageScore + 1) * 50"></div>
+              </div>
+            </div>
+
+            <div class="sentiment-grid">
+              <div class="sentiment-mini">
+                <span>😊</span>
+                <strong>{{ sentimentDashboard.positiveCount }}</strong>
+                <small>Positifs</small>
+              </div>
+              <div class="sentiment-mini">
+                <span>⚪</span>
+                <strong>{{ sentimentDashboard.neutralCount }}</strong>
+                <small>Neutres</small>
+              </div>
+              <div class="sentiment-mini">
+                <span>⚠️</span>
+                <strong>{{ sentimentDashboard.negativeCount + sentimentDashboard.mixedCount }}</strong>
+                <small>À surveiller</small>
+              </div>
+              <div class="sentiment-mini">
+                <span>🚨</span>
+                <strong>{{ sentimentDashboard.urgentCount }}</strong>
+                <small>Urgents</small>
+              </div>
+            </div>
+
+            <div class="sentiment-focus">
+              <div class="sentiment-focus-label">Émotion dominante</div>
+              <div class="sentiment-focus-value">{{ sentimentDashboard.dominantEmotion }}</div>
+            </div>
+          </div>
+        </div>
+        <ng-template #sentimentLoading>
+          <div class="sidebar-card-body sentiment-loading">
+            <div class="medical-spinner"></div>
+            <span>Analyse en cours...</span>
+          </div>
+        </ng-template>
+      </div>
+
+<!-- MÉTÉO SANTÉ -->
+<div class="sidebar-card weather-card">
+  <div class="sidebar-card-head">
+    <div>
+      <h3 appSpeakOnHover speakText="Météo et santé">🌤️ Météo Santé</h3>
+      <p class="sidebar-subtitle">Conseils selon la météo</p>
+    </div>
+    <button class="weather-settings-btn" (click)="showWeatherSearch = !showWeatherSearch" title="Changer de ville">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"/>
+        <path d="M15 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 0-2.83 2.83l.06.06a1.65 1.65 0 0 0 1.82.33"/>
+      </svg>
+    </button>
+  </div>
+  <div class="sidebar-card-body">
+    
+    <!-- Sélecteur de ville -->
+    <div *ngIf="showWeatherSearch" class="weather-search">
+      <input 
+        type="text" 
+        [(ngModel)]="selectedCity" 
+        placeholder="Entrez une ville (Paris, Lyon...)"
+        (keyup.enter)="searchWeather()"
+        class="weather-input">
+      <button (click)="searchWeather()" class="weather-search-btn">OK</button>
+    </div>
+
+    <!-- Affichage météo -->
+    <div *ngIf="isLoadingWeather" class="weather-loading">
+      <div class="weather-spinner"></div>
+      <span>Chargement...</span>
+    </div>
+
+    <div *ngIf="!isLoadingWeather && weatherData" class="weather-content">
+      <div class="weather-main">
+        <div class="weather-icon">{{ weatherData.icon }}</div>
+        <div class="weather-temp">{{ weatherData.temperature }}°</div>
+        <div class="weather-city">{{ weatherData.city }}</div>
+      </div>
+      
+      <div class="weather-details">
+        <div class="weather-detail">
+          <span>🌡️ Ressenti</span>
+          <strong>{{ weatherData.feelsLike }}°</strong>
+        </div>
+        <div class="weather-detail">
+          <span>💧 Humidité</span>
+          <strong>{{ weatherData.humidity }}%</strong>
+        </div>
+        <div class="weather-detail">
+          <span>💨 Vent</span>
+          <strong>{{ weatherData.windSpeed }} km/h</strong>
+        </div>
+      </div>
+      
+      <div class="weather-description">
+        {{ weatherData.description }}
+      </div>
+      
+      <div class="weather-advice">
+        <span class="advice-icon">💡</span>
+        <span class="advice-text">{{ weatherData.advice }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+      <!-- RECHERCHE MÉDICAMENTS OPENFDA -->
+      <div class="sidebar-card drug-search-sidebar">
+        <div class="sidebar-card-head">
+          <div>
+            <h3 appSpeakOnHover speakText="Recherche de médicaments">💊 Médicaments</h3>
+            <p class="sidebar-subtitle">Informations officielles FDA</p>
+          </div>
+          <span class="stats-pill">OpenFDA</span>
+        </div>
+        <div class="sidebar-card-body">
+          <div class="drug-search-input-sidebar">
+            <input 
+              type="text" 
+              [(ngModel)]="drugSearchQuery" 
+              placeholder="Ex: Tylenol, Advil, Aspirin..."
+              (keyup.enter)="searchDrug()"
+              class="drug-search-field">
+            <button (click)="searchDrug()" [disabled]="isSearchingDrug" class="drug-search-btn-sidebar">
+              {{ isSearchingDrug ? '🔍' : 'Rechercher' }}
+            </button>
+          </div>
+          
+          <div *ngIf="drugSearchResults.length > 0" class="drug-results-sidebar">
+            <div *ngFor="let drug of drugSearchResults" class="drug-result-sidebar">
+              <div class="drug-name-sidebar">{{ drug.name }}</div>
+              <div class="drug-info-sidebar">
+                <span class="drug-indication-sidebar">{{ drug.indications[0] | slice:0:80 }}</span>
+              </div>
+              <div class="drug-manufacturer-sidebar">{{ drug.manufacturer }}</div>
+            </div>
+          </div>
+
+          <div *ngIf="isSearchingDrug" class="drug-loading-sidebar">
+            <div class="spinner-small-sidebar"></div>
+            <span>Recherche...</span>
+          </div>
+
+          <div *ngIf="drugSearchResults.length === 0 && !isSearchingDrug && drugSearchQuery" class="drug-no-results">
+            💡 Aucun résultat. Essayez Tylenol, Advil ou Aspirin
+          </div>
+          
+          <div class="drug-note">
+            <span>ℹ️ Données officielles de la FDA (médicaments américains)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CITATIONS ET BLAGUES MÉDICALES -->
+      <div class="sidebar-card medical-content-card">
+        <div class="sidebar-card-head">
+          <div class="tabs-mini">
+            <button 
+              class="tab-mini" 
+              [class.active]="showQuote"
+              (click)="showQuote = true">
+              💬 Citation médicale
+            </button>
+            <button 
+              class="tab-mini" 
+              [class.active]="!showQuote"
+              (click)="showQuote = false">
+              😄 Blague médicale
+            </button>
+          </div>
+          <button 
+            class="refresh-btn" 
+            (click)="showQuote ? refreshQuote() : refreshJoke()"
+            title="Nouvelle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
+        </div>
+        <div class="sidebar-card-body medical-content-body">
+          
+          <!-- Mode Citation -->
+          <div *ngIf="showQuote" class="quote-container">
+            <div class="quote-icon">💬</div>
+            <div *ngIf="isLoadingQuote" class="medical-loading">
+              <div class="medical-spinner"></div>
+            </div>
+            <div *ngIf="!isLoadingQuote && currentQuote" class="quote-content">
+              <p class="quote-text">"{{ currentQuote.text }}"</p>
+              <p class="quote-author">— {{ currentQuote.author }}</p>
+            </div>
+          </div>
+
+          <!-- Mode Blague -->
+          <div *ngIf="!showQuote" class="joke-container">
+            <div class="joke-icon">😄</div>
+            <div *ngIf="isLoadingJoke" class="medical-loading">
+              <div class="medical-spinner"></div>
+            </div>
+            <div *ngIf="!isLoadingJoke && currentJoke" class="joke-content">
+              <p class="joke-text">{{ currentJoke.text }}</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Rules -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-head">
+          <h3 appSpeakOnHover speakText="Règles du forum">📋 Règles du forum</h3>
+        </div>
+        <div class="sidebar-card-body">
+          <div class="rule-list">
+            <div class="rule-item" appSpeakOnHover speakText="Respectez les autres membres">
+              <span class="rule-icon">🤝</span> Respectez les autres membres
+            </div>
+            <div class="rule-item" appSpeakOnHover speakText="Protégez vos données personnelles">
+              <span class="rule-icon">🔒</span> Protégez vos données personnelles
+            </div>
+            <div class="rule-item" appSpeakOnHover speakText="Pas de diagnostic en ligne">
+              <span class="rule-icon">⚕️</span> Pas de diagnostic en ligne
+            </div>
+            <div class="rule-item" appSpeakOnHover speakText="Citez des sources fiables">
+              <span class="rule-icon">✅</span> Citez des sources fiables
+            </div>
+            <div class="rule-item" appSpeakOnHover speakText="Pas de publicité ni spam">
+              <span class="rule-icon">🚫</span> Pas de publicité ni spam
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Urgence -->
+      <div class="urgence-card">
+        <p class="urgence-title" appSpeakOnHover speakText="Urgence médicale">🚨 Urgence médicale ?</p>
+        <p class="urgence-sub" appSpeakOnHover speakText="N'attendez pas une réponse, contactez les secours">
+          N'attendez pas une réponse. Contactez les secours.
+        </p>
+        <div class="urgence-cta" appSpeakOnHover speakText="Appelez le 15">
+          📞 Appelez le 15
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- MODAL GALERIE -->
+<div class="gallery-modal" *ngIf="galleryOpen" (click)="closeGallery()">
+  <div class="gallery-container" (click)="$event.stopPropagation()">
+    <div class="gallery-toolbar">
+      <div class="gallery-toolbar-left">
+        <button class="gallery-btn" (click)="toggleSlideshow()" [class.active]="slideshowActive">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h3l3-9 3 18 3-9h3"/>
+          </svg>
+          <span>{{ slideshowActive ? 'Arrêter' : 'Diaporama' }}</span>
+        </button>
+        <div class="slideshow-speed" *ngIf="slideshowActive">
+          <input type="range" min="1" max="5" step="0.5" [(ngModel)]="slideshowSpeed" (change)="restartSlideshow()">
+          <span>{{ slideshowSpeed }}s</span>
+        </div>
+      </div>
+      <div class="gallery-toolbar-right">
+        <button class="gallery-btn" (click)="rotateImage()" title="Rotation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 2v4h-4M4 12a8 8 0 018-8 8 8 0 108 8"/>
+            <path d="M12 8v4l3 3"/>
+          </svg>
+        </button>
+        <button class="gallery-btn" (click)="downloadImage()" title="Télécharger">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polygon points="7 10 12 15 17 10 12 15 7 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <button class="gallery-btn" (click)="shareImage()" title="Partager">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </button>
+        <button class="gallery-btn" (click)="toggleFullscreen()" title="Plein écran">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+          </svg>
+        </button>
+        <button class="gallery-close" (click)="closeGallery()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <button class="gallery-nav gallery-nav-prev" (click)="prevMedia()" *ngIf="galleryMedia.length > 1">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+    </button>
+    
+    <div class="gallery-image-wrapper" #galleryImageWrapper>
+      <div *ngIf="galleryCurrentType === 'image'" class="gallery-zoom-container" [style.transform]="'scale(' + zoomLevel + ')'" [style.transform-origin]="zoomOrigin">
+        <img [src]="galleryCurrentMedia" [alt]="galleryCurrentCaption" class="gallery-image" (wheel)="onZoom($event)" (mousedown)="onDragStart($event)" (mousemove)="onDragMove($event)" (mouseup)="onDragEnd()" (mouseleave)="onDragEnd()">
+      </div>
+      <div *ngIf="galleryCurrentType === 'video'" class="gallery-video-container">
+        <video #galleryVideo controls autoplay class="gallery-video">
+          <source [src]="galleryCurrentMedia" type="video/mp4">
+        </video>
+      </div>
+    </div>
+    
+    <button class="gallery-nav gallery-nav-next" (click)="nextMedia()" *ngIf="galleryMedia.length > 1">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+    </button>
+    
+    <div class="gallery-caption" *ngIf="galleryCurrentCaption">{{ galleryCurrentCaption }}</div>
+    <div class="gallery-counter" *ngIf="galleryMedia.length > 1">{{ galleryCurrentIndex + 1 }} / {{ galleryMedia.length }}</div>
+    
+    <div class="gallery-thumbnails" *ngIf="galleryMedia.length > 1">
+      <div *ngFor="let media of galleryMedia; let i = index" 
+           class="gallery-thumb" 
+           [class.active]="i === galleryCurrentIndex"
+           (click)="goToMedia(i)">
+        <img *ngIf="media.type === 'image'" [src]="media.src" [alt]="media.caption">
+        <div *ngIf="media.type === 'video'" class="video-thumb">
+          <span>🎬</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

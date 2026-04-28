@@ -1,0 +1,143 @@
+<div class="min-h-full bg-gray-50 py-12">
+  <div class="mx-auto w-full max-w-5xl px-8">
+    <div class="mb-10 text-center">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-teal-600">My Credit</p>
+      <h2 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">Credit Wallet</h2>
+      <p class="mt-4 text-base text-gray-600">Earned credit from plan changes or deactivations is stored here.</p>
+      <button (click)="startFullAudioTour()" 
+              class="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        🎧🚀 Start Audio Tour
+      </button>
+      <button (click)="describeThisPage()" 
+              class="mt-6 ml-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+        🎧 Describe This Page
+      </button>
+      @if ((audioTourService.isPlaying$ | async) || (audioTourService.isPaused$ | async)) {
+        <div class="mt-6 ml-4 flex gap-2">
+          <button (click)="audioTourService.pauseOrResume()"
+                  class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium">
+            {{ (audioTourService.isPaused$ | async) ? '▶ Resume' : '⏸ Pause' }}
+          </button>
+          <button (click)="audioTourService.stopTour()"
+                  class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium">
+            ⏹ Stop
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (loading) {
+      <div class="flex flex-col items-center justify-center rounded-3xl border border-gray-200 bg-white p-20 shadow-sm">
+        <div class="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-teal-600"></div>
+        <p class="mt-4 font-medium text-gray-600">Loading wallet details...</p>
+      </div>
+    }
+
+    @if (error && !loading) {
+      <div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
+        <div class="flex items-center gap-3">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <p class="font-semibold">{{ error }}</p>
+          <button (click)="reload()" class="ml-auto rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700">Retry</button>
+        </div>
+      </div>
+    }
+
+    @if (!loading && !error) {
+      <div class="space-y-8">
+        <!-- Balance Card -->
+        <div class="overflow-hidden rounded-3xl bg-gradient-to-r from-teal-600 to-cyan-600 p-8 text-white shadow-xl">
+          <div class="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+            <div>
+              <p class="text-xs font-black uppercase tracking-[0.2em] text-white/70">Current Balance</p>
+              <p class="mt-2 text-5xl font-black sm:text-6xl">{{ userCredit?.balance ?? 0 | number: '1.2-2' }} <span class="text-2xl">TND</span></p>
+            </div>
+            <div class="rounded-2xl bg-white/10 p-6 backdrop-blur-md ring-1 ring-white/20">
+               <svg class="h-10 w-10 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            </div>
+          </div>
+          @if ((userCredit?.balance ?? 0) > 0) {
+            <p class="mt-8 text-sm font-bold text-white/80">
+               ✨ Your credit will be automatically applied on your next payment.
+            </p>
+          }
+        </div>
+
+        @if (hasEmptyState) {
+  <div class="flex flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-teal-50 to-cyan-50 p-20 text-center ring-1 ring-teal-100">
+    <div class="relative">
+      <div class="h-24 w-24 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center ring-4 ring-white shadow-lg">
+        <svg class="h-12 w-12 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+        </svg>
+      </div>
+      <div class="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-teal-400 flex items-center justify-center shadow">
+        <svg class="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/>
+        </svg>
+      </div>
+    </div>
+    <h3 class="mt-8 text-2xl font-black text-gray-900">No credit yet</h3>
+    <p class="mt-3 text-sm text-gray-500 max-w-xs leading-relaxed">
+      Credit is earned when you downgrade or change plans. It's automatically applied at your next checkout.
+    </p>
+    <div class="mt-8 grid grid-cols-3 gap-4 w-full max-w-sm">
+      <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-teal-100 text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Balance</p>
+        <p class="mt-1 text-lg font-black text-teal-600">0.00</p>
+        <p class="text-[10px] text-gray-400">TND</p>
+      </div>
+      <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-teal-100 text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Earned</p>
+        <p class="mt-1 text-lg font-black text-gray-400">—</p>
+        <p class="text-[10px] text-gray-400">TND</p>
+      </div>
+      <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-teal-100 text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Used</p>
+        <p class="mt-1 text-lg font-black text-gray-400">—</p>
+        <p class="text-[10px] text-gray-400">TND</p>
+      </div>
+    </div>
+    <button routerLink="/plans"
+            class="mt-8 rounded-full bg-teal-600 px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-teal-700 hover:shadow-teal-200">
+      Explore Plans
+    </button>
+  </div>
+
+        } @else {
+          <!-- History Table -->
+          <div class="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-gray-200">
+            <div class="border-b border-gray-100 bg-gray-50 px-8 py-4">
+              <h3 class="text-sm font-bold uppercase tracking-widest text-gray-900">Transaction History</h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-gray-100 bg-gray-50/50 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                    <th class="px-8 py-4">Date</th>
+                    <th class="px-8 py-4">Description</th>
+                    <th class="px-8 py-4 text-right">Amount</th>
+                    <th class="px-8 py-4 text-right">New Balance</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  @for (entry of creditHistory; track entry.id ?? $index) {
+                    <tr class="transition hover:bg-gray-50/50">
+                      <td class="px-8 py-5 font-medium text-gray-500">{{ getHistoryDate(entry) | date: 'MMM dd, yyyy' }}</td>
+                      <td class="px-8 py-5 font-bold text-gray-900">{{ formatHistoryDescription(entry) }}</td>
+                      <td class="px-8 py-5 text-right font-black" [ngClass]="(entry.amount ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'">
+                        {{ (entry.amount ?? 0) > 0 ? '+' : '' }}{{ entry.amount ?? 0 | number: '1.2-2' }} TND
+                      </td>
+                      <td class="px-8 py-5 text-right font-black text-gray-900">{{ getRemainingBalance(entry) | number: '1.2-2' }} TND</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+

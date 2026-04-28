@@ -1,0 +1,347 @@
+<section class="doctor-dashboard">
+  <div class="dashboard-container">
+
+    <!-- ══ HERO ══ -->
+    <div class="dashboard-hero">
+      <div class="hero-pattern"></div>
+      <div class="hero-circles"><div class="hc hc1"></div><div class="hc hc2"></div></div>
+      <div class="hero-content">
+        <div class="hero-left">
+          <div class="welcome-badge"><i class="fas fa-stethoscope"></i><span>Espace Médecin</span></div>
+          <h1 class="hero-title">Bonjour, <span class="doctor-name">{{ medecinNom }}</span></h1>
+          <p class="hero-subtitle"><i class="fas fa-calendar-days"></i> {{ currentDate }}</p>
+          <div class="hero-kpis">
+            <div class="hero-kpi"><span class="kpi-val">{{ stats.total }}</span><span class="kpi-lbl">Total RDV</span></div>
+            <div class="kpi-divider"></div>
+            <div class="hero-kpi"><span class="kpi-val">{{ stats.confirmed + stats.done }}</span><span class="kpi-lbl">Réalisés</span></div>
+            <div class="kpi-divider"></div>
+            <div class="hero-kpi"><span class="kpi-val">{{ stats.pending }}</span><span class="kpi-lbl">En attente</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STAT CARDS ══ -->
+    <div class="stats-section">
+      <div class="section-header">
+        <div><h3>Aperçu des consultations</h3><p>Statistiques de votre activité</p></div>
+        <div class="period-tabs">
+          <button [class.active]="currentPeriod==='week'"  (click)="changePeriod('week')">Semaine</button>
+          <button [class.active]="currentPeriod==='month'" (click)="changePeriod('month')">Mois</button>
+          <button [class.active]="currentPeriod==='year'"  (click)="changePeriod('year')">Année</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card s-pending">
+          <div class="sc-icon"><i class="fas fa-hourglass-half"></i></div>
+          <div class="sc-body"><h3>{{ stats.pending }}</h3><p>En attente</p></div>
+          <div class="sc-trend up"><i class="fas fa-arrow-trend-up"></i> +12%</div>
+        </div>
+        <div class="stat-card s-confirmed">
+          <div class="sc-icon"><i class="fas fa-circle-check"></i></div>
+          <div class="sc-body"><h3>{{ stats.confirmed }}</h3><p>Confirmés</p></div>
+          <div class="sc-trend up"><i class="fas fa-arrow-trend-up"></i> +8%</div>
+        </div>
+        <div class="stat-card s-done">
+          <div class="sc-icon"><i class="fas fa-check-double"></i></div>
+          <div class="sc-body"><h3>{{ stats.done }}</h3><p>Terminés</p></div>
+          <div class="sc-trend up"><i class="fas fa-arrow-trend-up"></i> +23%</div>
+        </div>
+        <div class="stat-card s-cancelled">
+          <div class="sc-icon"><i class="fas fa-ban"></i></div>
+          <div class="sc-body"><h3>{{ stats.cancelled }}</h3><p>Annulés</p></div>
+          <div class="sc-trend down"><i class="fas fa-arrow-trend-down"></i> -5%</div>
+        </div>
+        <div class="stat-card s-total">
+          <div class="sc-icon"><i class="fas fa-chart-line"></i></div>
+          <div class="sc-body"><h3>{{ stats.total }}</h3><p>Total RDV</p></div>
+          <div class="sc-trend up"><i class="fas fa-arrow-trend-up"></i> +15%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ LINE CHART (QuickChart) + UPCOMING ══ -->
+    <div class="main-grid">
+
+      <div class="card chart-card">
+        <div class="card-head">
+          <div class="ch-left">
+            <div class="ch-icon teal"><i class="fas fa-chart-line"></i></div>
+            <div><h3>Activité des consultations</h3><p>Données réelles — <strong>QuickChart API</strong></p></div>
+          </div>
+          <div class="period-tabs sm">
+            <button [class.active]="currentPeriod==='week'"  (click)="changePeriod('week')">Sem</button>
+            <button [class.active]="currentPeriod==='month'" (click)="changePeriod('month')">Mois</button>
+            <button [class.active]="currentPeriod==='year'"  (click)="changePeriod('year')">An</button>
+          </div>
+        </div>
+        <div class="chart-body">
+          <div *ngIf="lineChartLoading" class="chart-skeleton">
+            <div class="sk-bar" *ngFor="let i of [1,2,3,4,5,6,7]" [style.height.%]="25+i*9"></div>
+          </div>
+          <img *ngIf="!lineChartLoading && lineChartUrl" [src]="lineChartUrl" class="chart-img" alt="Graphique activité" (error)="lineChartLoading=false"/>
+        </div>
+        <span class="api-badge qc"><i class="fas fa-plug"></i> QuickChart.io</span>
+      </div>
+
+      <div class="card upcoming-card">
+        <div class="card-head">
+          <div class="ch-left">
+            <div class="ch-icon purple"><i class="fas fa-calendar-week"></i></div>
+            <div><h3>Prochaines consultations</h3><p>À venir dans les prochains jours</p></div>
+          </div>
+          <button class="btn-link" (click)="goToAppointments()">Voir tout <i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="upcoming-list">
+          <div *ngIf="upcomingAppointments.length === 0" class="empty-state">
+            <i class="fas fa-calendar-check"></i><p>Aucun rendez-vous programmé</p>
+          </div>
+          <div class="up-item" *ngFor="let rdv of upcomingAppointments">
+            <div class="up-date">
+              <span class="up-day">{{ getDay(rdv.date) }}</span>
+              <span class="up-month">{{ getMonth(rdv.date) }}</span>
+            </div>
+            <div class="up-info">
+              <h4>{{ rdv.patientNom }}</h4>
+              <div class="up-meta">
+                <span><i class="fas fa-clock"></i> {{ rdv.heure }}</span>
+                <span><i class="fas fa-location-dot"></i> Cabinet</span>
+              </div>
+            </div>
+            <span class="status-chip" [ngClass]="rdv.status?.toLowerCase()">
+              <span class="chip-dot"></span>{{ getStatusText(rdv.status) }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BOTTOM GRID ══ -->
+    <div class="bottom-grid">
+
+      <!-- IA No-show SVG inchangé -->
+      <div class="card noshow-card">
+        <div class="card-head">
+          <div class="ch-left">
+            <div class="ch-icon amber"><i class="fas fa-robot"></i></div>
+            <div><h3>Prédiction IA — No Show</h3><p>Analyse du prochain rendez-vous</p></div>
+          </div>
+          <span class="api-badge" style="align-self:center"><i class="fas fa-brain"></i> ML Model</span>
+        </div>
+        <div *ngIf="aiLoading" class="noshow-body" style="justify-content:center;padding:2rem 0">
+          <div class="donut-skeleton"></div>
+          <p style="margin-top:1rem;color:var(--muted);font-size:.85rem">Analyse en cours…</p>
+        </div>
+        <div *ngIf="!aiLoading && aiError" class="noshow-body" style="flex-direction:column;align-items:center;padding:1.5rem 0">
+          <i class="fas fa-triangle-exclamation" style="font-size:2rem;color:var(--amber)"></i>
+          <p style="margin-top:.5rem;color:var(--muted);font-size:.85rem">Service IA indisponible</p>
+        </div>
+        <div *ngIf="!aiLoading && !aiError && aiPrediction" class="noshow-body">
+          <div class="noshow-chart-wrap" style="position:relative">
+            <svg viewBox="0 0 120 120" width="120" height="120">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#f1f5f9" stroke-width="12"/>
+              <circle cx="60" cy="60" r="50" fill="none"
+                [attr.stroke]="aiPrediction.risk_color === 'green' ? '#1a9094' : aiPrediction.risk_color === 'amber' ? '#f59e0b' : '#ef4444'"
+                stroke-width="12" stroke-linecap="round" stroke-dasharray="314"
+                [attr.stroke-dashoffset]="314 - (314 * aiPrediction.noshow_risk / 100)"
+                transform="rotate(-90 60 60)"/>
+            </svg>
+            <div class="donut-center">
+              <span class="donut-pct">{{ aiPrediction.noshow_risk }}%</span>
+              <span class="donut-sub">risque NS</span>
+            </div>
+          </div>
+          <div class="noshow-legend" style="flex:1">
+            <div style="margin-bottom:.75rem">
+              <span style="font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em"
+                    [style.color]="aiPrediction.risk_color === 'green' ? '#1a9094' : aiPrediction.risk_color === 'amber' ? '#f59e0b' : '#ef4444'">
+                Risque {{ aiPrediction.risk_level }}
+              </span>
+            </div>
+            <div *ngFor="let f of aiPrediction.top_factors" class="leg-row" style="margin-bottom:.4rem">
+              <span class="leg-lbl" style="min-width:90px;font-size:.8rem">{{ f.name }}</span>
+              <div class="leg-bar-track"><div class="leg-bar-fill" [style.width.%]="f.importance" [style.background]="'var(--teal)'"></div></div>
+              <span class="leg-pct">{{ f.importance }}%</span>
+            </div>
+            <div class="leg-row" style="margin-top:.75rem">
+              <span class="leg-dot" style="background:var(--teal)"></span>
+              <span class="leg-lbl">Présents</span>
+              <div class="leg-bar-track"><div class="leg-bar-fill" [style.width.%]="aiPrediction.present_prob" style="background:var(--teal)"></div></div>
+              <span class="leg-pct">{{ aiPrediction.present_prob }}%</span>
+            </div>
+            <div class="leg-row">
+              <span class="leg-dot" style="background:var(--amber)"></span>
+              <span class="leg-lbl">No Show</span>
+              <div class="leg-bar-track"><div class="leg-bar-fill" [style.width.%]="aiPrediction.noshow_risk" style="background:var(--amber)"></div></div>
+              <span class="leg-pct">{{ aiPrediction.noshow_risk }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disponibilités -->
+      <div class="card avail-card">
+        <div class="card-head">
+          <div class="ch-left">
+            <div class="ch-icon green"><i class="fas fa-calendar-check"></i></div>
+            <div><h3>Disponibilités — cette semaine</h3><p>Créneaux libres et occupés</p></div>
+          </div>
+          <span class="free-badge"><i class="fas fa-circle-check"></i> {{ availableSlotsTotal }} libres</span>
+        </div>
+        <div class="avail-body">
+          <div class="avail-row" *ngFor="let day of weekAvailability">
+            <div class="avail-day-name" [class.today]="day.isToday">
+              {{ day.label }}<span *ngIf="day.isToday" class="today-tag">Aujourd'hui</span>
+            </div>
+            <div class="avail-slots">
+              <span class="slot" *ngFor="let slot of day.slots" [ngClass]="slot.status"
+                    [title]="slot.status === 'taken' ? slot.patient : slot.time">{{ slot.time }}</span>
+            </div>
+            <div class="avail-summary"><span class="free-count">{{ day.free }} libres</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="card activity-card">
+        <div class="card-head">
+          <div class="ch-left">
+            <div class="ch-icon rose"><i class="fas fa-clock-rotate-left"></i></div>
+            <div><h3>Activité récente</h3><p>Dernières actions</p></div>
+          </div>
+        </div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot teal"><i class="fas fa-check"></i></div>
+            <div class="tl-body"><p>RDV confirmé avec <strong>Ahmed Ben Ali</strong></p><span><i class="fas fa-clock"></i> Il y a 2 heures</span></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot blue"><i class="fas fa-check-double"></i></div>
+            <div class="tl-body"><p>Consultation terminée — <strong>Fatima Zohra</strong></p><span><i class="fas fa-clock"></i> Il y a 3 heures</span></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot amber"><i class="fas fa-hourglass-half"></i></div>
+            <div class="tl-body"><p>Nouvelle demande de <strong>Mohamed Salah</strong></p><span><i class="fas fa-clock"></i> Il y a 5 heures</span></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot red"><i class="fas fa-ban"></i></div>
+            <div class="tl-body"><p>RDV annulé par <strong>Nour Belhaj</strong></p><span><i class="fas fa-clock"></i> Il y a 6 heures</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ GRAPHIQUES ANALYTIQUES ══ -->
+    <div class="analytics-section">
+
+      <!-- LIGNE 1 : Bar spécialités (QuickChart) + Gauge (Chart.js canvas) -->
+      <div class="analytics-row-main">
+
+        <div class="card chart-card analytics-wide">
+          <div class="card-head">
+            <div class="ch-left">
+              <div class="ch-icon blue"><i class="fas fa-chart-bar"></i></div>
+              <div><h3>RDV par spécialité</h3><p>Répartition réelle — <strong>QuickChart API</strong></p></div>
+            </div>
+          </div>
+          <div class="chart-body">
+            <div *ngIf="barChartLoading" class="chart-skeleton">
+              <div class="sk-bar" *ngFor="let i of [1,2,3,4,5]" [style.height.%]="20+i*12"></div>
+            </div>
+            <p *ngIf="!barChartLoading && !barChartUrl" style="text-align:center;color:#94a3b8;padding:2rem">Aucune donnée disponible</p>
+            <img *ngIf="!barChartLoading && barChartUrl" [src]="barChartUrl" class="chart-img" alt="RDV par spécialité"/>
+          </div>
+          <span class="api-badge qc"><i class="fas fa-plug"></i> QuickChart.io</span>
+        </div>
+
+        <div class="card chart-card analytics-narrow">
+          <div class="card-head">
+            <div class="ch-left">
+              <div class="ch-icon green"><i class="fas fa-gauge-high"></i></div>
+              <div><h3>Taux de remplissage</h3><p>Interactif — <strong>Chart.js</strong></p></div>
+            </div>
+          </div>
+          <div class="chart-body canvas-center">
+            <div *ngIf="!gaugeReady" class="donut-skeleton"></div>
+            <div *ngIf="gaugeReady" style="position:relative;width:220px;height:220px;margin:0 auto">
+              <canvas #gaugeCanvas role="img" aria-label="Taux de remplissage hebdomadaire"></canvas>
+            </div>
+          </div>
+          <div class="gauge-legend">
+            <span class="gl-dot" style="background:#10b981"></span><span>&gt;75% optimal</span>
+            <span class="gl-dot" style="background:#f59e0b"></span><span>40–75% moyen</span>
+            <span class="gl-dot" style="background:#ef4444"></span><span>&lt;40% faible</span>
+          </div>
+          <span class="api-badge cj"><i class="fas fa-bolt"></i> Chart.js</span>
+        </div>
+
+      </div>
+
+      <!-- LIGNE 2 : Radar (Chart.js) + Tendance 12 mois (QuickChart) -->
+      <div class="analytics-row-main">
+
+        <div class="card chart-card analytics-narrow">
+          <div class="card-head">
+            <div class="ch-left">
+              <div class="ch-icon purple"><i class="fas fa-chart-radar"></i></div>
+              <div><h3>Performance par jour</h3><p>Interactif — <strong>Chart.js</strong></p></div>
+            </div>
+          </div>
+          <div class="chart-body canvas-center">
+            <div *ngIf="!radarReady" class="donut-skeleton"></div>
+            <div *ngIf="radarReady" style="position:relative;width:240px;height:240px;margin:0 auto">
+              <canvas #radarCanvas role="img" aria-label="Radar performance hebdomadaire par jour"></canvas>
+            </div>
+          </div>
+          <span class="api-badge cj"><i class="fas fa-bolt"></i> Chart.js</span>
+        </div>
+
+        <div class="card chart-card analytics-wide">
+          <div class="card-head">
+            <div class="ch-left">
+              <div class="ch-icon teal"><i class="fas fa-chart-line"></i></div>
+              <div><h3>Tendance 12 mois — Total vs No Show</h3><p>Données réelles — <strong>QuickChart API</strong></p></div>
+            </div>
+          </div>
+          <div class="chart-body">
+            <div *ngIf="trendChartLoading" class="chart-skeleton">
+              <div class="sk-bar" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10,11,12]" [style.height.%]="15+i*5"></div>
+            </div>
+            <img *ngIf="!trendChartLoading && trendChartUrl" [src]="trendChartUrl" class="chart-img" alt="Tendance mensuelle"/>
+          </div>
+          <span class="api-badge qc"><i class="fas fa-plug"></i> QuickChart.io</span>
+        </div>
+
+      </div>
+
+      <!-- LIGNE 3 : No Show par heure (Chart.js canvas, pleine largeur) -->
+      <div class="card chart-card analytics-full">
+        <div class="card-head">
+          <div class="ch-left">
+            <div class="ch-icon amber"><i class="fas fa-clock"></i></div>
+            <div><h3>No Show par heure de RDV</h3><p>Couleurs et tooltip dynamiques selon le risque — <strong>Chart.js</strong></p></div>
+          </div>
+          <div class="heatmap-legend">
+            <span class="hl-item"><span class="hl-dot" style="background:rgba(26,144,148,0.4);border:1.5px solid #1a9094"></span>Total RDV</span>
+            <span class="hl-item"><span class="hl-dot" style="background:#ef4444"></span>No Show</span>
+            <span class="hl-sep">|</span>
+            <span class="hl-item"><span class="hl-risk" style="background:#10b981"></span>Faible</span>
+            <span class="hl-item"><span class="hl-risk" style="background:#f59e0b"></span>Modéré</span>
+            <span class="hl-item"><span class="hl-risk" style="background:#ef4444"></span>Élevé</span>
+          </div>
+        </div>
+        <div class="chart-body">
+          <div *ngIf="!heatmapReady" class="chart-skeleton">
+            <div class="sk-bar" *ngFor="let i of [1,2,3,4,5,6,7,8]" [style.height.%]="20+i*8"></div>
+          </div>
+          <div *ngIf="heatmapReady" style="position:relative;width:100%;height:280px;">
+            <canvas #heatmapCanvas role="img" aria-label="Bar chart No Show par heure avec risque"></canvas>
+          </div>
+        </div>
+        <span class="api-badge cj"><i class="fas fa-bolt"></i> Chart.js</span>
+      </div>
+
+    </div>
+
+  </div>
+</section>

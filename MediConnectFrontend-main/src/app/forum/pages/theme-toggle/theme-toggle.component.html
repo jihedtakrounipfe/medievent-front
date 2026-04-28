@@ -1,0 +1,10 @@
+<!-- components/theme-toggle/theme-toggle.component.html -->
+<button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="currentTheme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'">
+  <div class="toggle-track">
+    <div class="toggle-thumb" [class.dark]="currentTheme === 'dark'">
+      <span class="light-icon" *ngIf="currentTheme === 'light'">☀️</span>
+      <span class="dark-icon" *ngIf="currentTheme === 'dark'">🌙</span>
+    </div>
+  </div>
+  <span class="toggle-label">{{ currentTheme === 'light' ? 'Mode clair' : 'Mode sombre' }}</span>
+</button>

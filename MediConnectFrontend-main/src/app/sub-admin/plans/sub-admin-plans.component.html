@@ -1,0 +1,564 @@
+<div class="min-h-screen bg-slate-50 px-6 py-8">
+  <div class="mx-auto max-w-7xl">
+
+    <!-- Header -->
+    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-[0.25em] text-teal-600">Admin · Plans</p>
+        <h1 class="mt-1 text-3xl font-black tracking-tight text-slate-900">Plan Management</h1>
+        <p class="mt-1 text-sm text-slate-500">Configure patient and doctor plans, pricing and features.</p>
+      </div>
+      <button type="button"
+        class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-teal-200 transition hover:-translate-y-0.5 hover:bg-teal-700"
+        (click)="openCreateModal()">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14m-7-7h14"/>
+        </svg>
+        New Plan
+      </button>
+    </div>
+
+    <!-- Alerts -->
+    @if (loading) {
+      <div class="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-700">Loading plans...</div>
+    }
+    @if (error) {
+      <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{{ error }}</div>
+    }
+    @if (success) {
+      <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{{ success }}</div>
+    }
+
+    <!-- Toolbar -->
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex gap-1 rounded-xl bg-slate-200 p-1">
+        <button class="rounded-lg px-5 py-2 text-sm font-bold transition-all"
+          [class]="activeTab === 'patient' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+          (click)="changeTab('patient')">
+          Patient Plans
+          <span class="ml-1.5 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-bold text-teal-700">{{ filteredPatientPlans.length }}</span>
+        </button>
+        <button class="rounded-lg px-5 py-2 text-sm font-bold transition-all"
+          [class]="activeTab === 'doctor' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+          (click)="changeTab('doctor')">
+          Doctor Plans
+          <span class="ml-1.5 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-bold text-teal-700">{{ filteredDoctorPlans.length }}</span>
+        </button>
+      </div>
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+        </svg>
+        <input type="text" placeholder="Search plans..."
+          [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange()"
+          class="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:w-64" />
+      </div>
+    </div>
+
+    <!-- Patient Plans Grid -->
+@if (activeTab === 'patient' && !loading) {
+  <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-2">
+    @for (plan of displayedPatientPlans; track plan.id) {
+      <div class="relative overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
+        [class]="plan.isActive
+          ? 'bg-gradient-to-br from-white to-slate-50 shadow-lg shadow-slate-200/80 ring-1 ring-slate-200'
+          : 'bg-slate-100 shadow-md opacity-60 ring-1 ring-slate-200'">
+
+        <!-- Glow effect top -->
+        <div class="absolute -top-10 -right-10 h-40 w-40 rounded-full opacity-20 blur-3xl"
+          [class]="plan.isActive ? 'bg-teal-400' : 'bg-slate-400'"></div>
+
+        <!-- Color strip -->
+        <div class="relative h-2 w-full rounded-t-2xl"
+          [class]="plan.isActive ? 'bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-500' : 'bg-slate-300'"></div>
+
+        <div class="relative p-6">
+          <!-- Badge + name -->
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="inline-block rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest"
+                [class]="plan.isActive ? 'bg-teal-50 text-teal-600' : 'bg-slate-200 text-slate-400'">
+                Patient
+              </span>
+              <h3 class="mt-2 text-2xl font-black tracking-tight text-slate-900">{{ plan.name }}</h3>
+            </div>
+            <span class="rounded-full px-3 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.isActive
+                ? 'bg-emerald-500 text-white shadow-emerald-200'
+                : 'bg-slate-300 text-slate-600'">
+              {{ plan.isActive ? '● Active' : '○ Inactive' }}
+            </span>
+          </div>
+
+          <!-- Pricing 3D cards -->
+          <div class="mt-5 flex gap-3">
+            <div class="flex-1 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 p-4 text-white shadow-lg shadow-teal-200">
+              <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Monthly</p>
+              <p class="mt-1 text-2xl font-black leading-none">{{ plan.priceMonthly }}</p>
+              <p class="text-xs font-medium opacity-70">TND / mo</p>
+            </div>
+            <div class="flex-1 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 p-4 text-white shadow-lg shadow-slate-300">
+              <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Yearly</p>
+              <p class="mt-1 text-2xl font-black leading-none">{{ plan.priceYearly }}</p>
+              <p class="text-xs font-medium opacity-70">TND / yr</p>
+            </div>
+            <div class="flex-1 rounded-xl bg-gradient-to-br from-cyan-50 to-teal-50 p-4 text-teal-700 shadow-sm ring-1 ring-teal-100">
+              <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Appts</p>
+              <p class="mt-1 text-2xl font-black leading-none">{{ plan.maxAppointmentsPerMonth ?? '∞' }}</p>
+              <p class="text-xs font-medium opacity-70">/ month</p>
+            </div>
+          </div>
+
+          <!-- Feature chips -->
+          <div class="mt-4 flex flex-wrap gap-1.5">
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasAI ? 'bg-teal-500 text-white shadow-teal-200' : 'bg-slate-100 text-slate-400 line-through'">AI</span>
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasForum ? 'bg-teal-500 text-white shadow-teal-200' : 'bg-slate-100 text-slate-400 line-through'">Forum</span>
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.has24Support ? 'bg-teal-500 text-white shadow-teal-200' : 'bg-slate-100 text-slate-400 line-through'">24/7</span>
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasVideoConsultations ? 'bg-teal-500 text-white shadow-teal-200' : 'bg-slate-100 text-slate-400 line-through'">Video</span>
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasHealthRecords ? 'bg-teal-500 text-white shadow-teal-200' : 'bg-slate-100 text-slate-400 line-through'">Records</span>
+          </div>
+
+          <!-- Actions -->
+          <div class="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4">
+            <button class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white py-2.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md hover:-translate-y-0.5"
+              (click)="openPatientEditModal(plan)">
+              ✏️ Edit
+            </button>
+            <button class="flex flex-1 items-center justify-center rounded-xl bg-white py-2.5 text-xs font-bold shadow-sm ring-1 ring-slate-200 transition hover:shadow-md hover:-translate-y-0.5"
+              [class]="plan.isActive ? 'text-amber-600' : 'text-emerald-600'"
+              (click)="togglePatientPlan(plan.id)">
+              {{ plan.isActive ? '⏸ Deactivate' : '▶ Activate' }}
+            </button>
+            <button class="flex items-center justify-center rounded-xl bg-white p-2.5 text-rose-500 shadow-sm ring-1 ring-rose-100 transition hover:bg-rose-500 hover:text-white hover:shadow-md hover:-translate-y-0.5"
+              (click)="deletePatientPlan(plan.id, plan.name)">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+    @if (displayedPatientPlans.length === 0) {
+      <div class="col-span-3 rounded-2xl border border-dashed border-slate-300 bg-white p-16 text-center">
+        <p class="font-bold text-slate-700">No patient plans found</p>
+        <p class="mt-1 text-sm text-slate-400">Create your first patient plan to get started.</p>
+      </div>
+    }
+  </div>
+}
+
+<!-- Doctor Plans Grid -->
+@if (activeTab === 'doctor' && !loading) {
+  <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-2">
+    @for (plan of displayedDoctorPlans; track plan.id) {
+      <div class="relative overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
+        [class]="plan.isActive
+          ? 'bg-gradient-to-br from-white to-slate-50 shadow-lg shadow-slate-200/80 ring-1 ring-slate-200'
+          : 'bg-slate-100 shadow-md opacity-60 ring-1 ring-slate-200'">
+
+        <div class="absolute -top-10 -right-10 h-40 w-40 rounded-full opacity-20 blur-3xl"
+          [class]="plan.isActive ? 'bg-violet-400' : 'bg-slate-400'"></div>
+
+        <div class="relative h-2 w-full rounded-t-2xl"
+          [class]="plan.isActive ? 'bg-gradient-to-r from-violet-500 via-indigo-400 to-violet-500' : 'bg-slate-300'"></div>
+
+        <div class="relative p-6">
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="inline-block rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest"
+                [class]="plan.isActive ? 'bg-violet-50 text-violet-600' : 'bg-slate-200 text-slate-400'">
+                Doctor
+              </span>
+              <h3 class="mt-2 text-2xl font-black tracking-tight text-slate-900">{{ plan.name }}</h3>
+            </div>
+            <span class="rounded-full px-3 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.isActive
+                ? 'bg-emerald-500 text-white shadow-emerald-200'
+                : 'bg-slate-300 text-slate-600'">
+              {{ plan.isActive ? '● Active' : '○ Inactive' }}
+            </span>
+          </div>
+
+          <div class="mt-5 flex gap-3">
+            <div class="flex-1 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 p-5 text-white shadow-lg shadow-teal-200">
+  <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Monthly</p>
+  <p class="mt-2 text-3xl font-black leading-none">{{ plan.priceMonthly }}</p>
+  <p class="mt-1 text-xs font-medium opacity-70">TND / mo</p>
+</div>
+            <div class="flex-1 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 p-4 text-white shadow-lg shadow-slate-300">
+              <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Yearly</p>
+              <p class="mt-1 text-2xl font-black leading-none">{{ plan.priceYearly }}</p>
+              <p class="text-xs font-medium opacity-70">TND / yr</p>
+            </div>
+            <div class="flex-1 rounded-xl bg-gradient-to-br from-violet-50 to-indigo-50 p-4 text-violet-700 shadow-sm ring-1 ring-violet-100">
+              <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Consults</p>
+              <p class="mt-1 text-2xl font-black leading-none">{{ plan.maxConsultationsPerMonth ?? '∞' }}</p>
+              <p class="text-xs font-medium opacity-70">/ month</p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-1.5">
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasAI ? 'bg-violet-500 text-white shadow-violet-200' : 'bg-slate-100 text-slate-400 line-through'">AI</span>
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasAdvancedAnalytics ? 'bg-violet-500 text-white shadow-violet-200' : 'bg-slate-100 text-slate-400 line-through'">Analytics</span>
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasAppointmentScheduling ? 'bg-violet-500 text-white shadow-violet-200' : 'bg-slate-100 text-slate-400 line-through'">Scheduling</span>
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasPatientManagement ? 'bg-violet-500 text-white shadow-violet-200' : 'bg-slate-100 text-slate-400 line-through'">Patients</span>
+            <span class="rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm"
+              [class]="plan.hasTelemedicine ? 'bg-violet-500 text-white shadow-violet-200' : 'bg-slate-100 text-slate-400 line-through'">Telemedicine</span>
+          </div>
+
+          <div class="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4">
+            <button class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white py-2.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md hover:-translate-y-0.5"
+              (click)="openDoctorEditModal(plan)">
+              ✏️ Edit
+            </button>
+            <button class="flex flex-1 items-center justify-center rounded-xl bg-white py-2.5 text-xs font-bold shadow-sm ring-1 ring-slate-200 transition hover:shadow-md hover:-translate-y-0.5"
+              [class]="plan.isActive ? 'text-amber-600' : 'text-emerald-600'"
+              (click)="toggleDoctorPlan(plan.id)">
+              {{ plan.isActive ? '⏸ Deactivate' : '▶ Activate' }}
+            </button>
+            <button class="flex items-center justify-center rounded-xl bg-white p-2.5 text-rose-500 shadow-sm ring-1 ring-rose-100 transition hover:bg-rose-500 hover:text-white hover:shadow-md hover:-translate-y-0.5"
+              (click)="deleteDoctorPlan(plan.id, plan.name)">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+    @if (displayedDoctorPlans.length === 0) {
+      <div class="col-span-3 rounded-2xl border border-dashed border-slate-300 bg-white p-16 text-center">
+        <p class="font-bold text-slate-700">No doctor plans found</p>
+        <p class="mt-1 text-sm text-slate-400">Create your first doctor plan to get started.</p>
+      </div>
+    }
+  </div>
+}
+    <!-- Pagination -->
+    @if (totalPages > 1) {
+      <div class="mt-8 flex items-center justify-between">
+        <span class="text-sm text-slate-500">Page {{ currentPage }} of {{ totalPages }}</span>
+        <div class="flex gap-2">
+          <button class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
+            [disabled]="currentPage === 1" (click)="previousPage()">← Prev</button>
+          <button class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
+            [disabled]="currentPage === totalPages" (click)="nextPage()">Next →</button>
+        </div>
+      </div>
+    }
+
+  </div>
+</div>
+
+<!-- ── Modal ───────────────────────────────────────────────────── -->
+@if (showPlanModal) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 backdrop-blur-md" (click)="closePlanModal()">
+    <div class="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl" (click)="$event.stopPropagation()">
+
+      <!-- Modal header with gradient -->
+      <div class="relative overflow-hidden px-8 py-7"
+        [class]="activeTab === 'patient' ? 'bg-gradient-to-br from-teal-600 to-cyan-600' : 'bg-gradient-to-br from-violet-600 to-indigo-600'">
+        <div class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10"></div>
+        <div class="absolute -right-4 top-8 h-16 w-16 rounded-full bg-white/10"></div>
+        <div class="relative flex items-start justify-between">
+          <div>
+            <span class="inline-block rounded-full bg-white/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
+              {{ modalMode === 'create' ? '+ New Plan' : '✏️ Edit Plan' }}
+            </span>
+            <h2 class="mt-2 text-2xl font-black text-white">
+              {{ activeTab === 'patient' ? 'Patient' : 'Doctor' }} Plan
+            </h2>
+            <p class="mt-1 text-sm text-white/70">Fill in the details below to {{ modalMode === 'create' ? 'create a new' : 'update this' }} plan.</p>
+          </div>
+          <button class="rounded-xl bg-white/20 p-2 text-white transition hover:bg-white/30" (click)="closePlanModal()">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Progress bar inside header -->
+        <div class="relative mt-5">
+          <div class="flex items-center justify-between text-xs text-white/70 mb-1.5">
+            <span>Form completion</span>
+            <span class="font-black text-white">{{ getFormCompletion() }}%</span>
+          </div>
+          <div class="h-2 w-full overflow-hidden rounded-full bg-white/20">
+            <div class="h-full rounded-full bg-white transition-all duration-500"
+              [style.width.%]="getFormCompletion()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal body -->
+      <div class="max-h-[60vh] overflow-y-auto">
+
+        <!-- Patient Form -->
+        @if (activeTab === 'patient') {
+          <div class="space-y-0 divide-y divide-slate-100">
+
+            <!-- Section: Basic Info -->
+            <div class="px-8 py-6">
+              <div class="mb-4 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-sm">📋</div>
+                <p class="text-xs font-black uppercase tracking-widest text-slate-500">Basic Info</p>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-xs font-black text-slate-700">Plan Name <span class="text-rose-500">*</span></label>
+                  <input type="text" [(ngModel)]="patientForm.name"
+                    class="w-full rounded-xl border-2 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition"
+                    [class]="formErrors['patientName'] ? 'border-rose-400 bg-rose-50 focus:border-rose-500' : 'border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-50'"
+                    placeholder="e.g. PREMIUM" />
+                  @if (formErrors['patientName']) {
+                    <p class="mt-1.5 flex items-center gap-1 text-xs font-bold text-rose-500">
+                      <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                      {{ formErrors['patientName'] }}
+                    </p>
+                  }
+                </div>
+                <div>
+                  <label class="mb-2 block text-xs font-black text-slate-700">Max Appointments / Month</label>
+                  <input type="number" [(ngModel)]="patientMaxAppointmentsInput"
+                    class="w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-50"
+                    placeholder="Leave blank for unlimited" min="0" />
+                  <p class="mt-1.5 text-xs text-slate-400">Leave blank for unlimited</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section: Pricing -->
+            <div class="px-8 py-6">
+              <div class="mb-4 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-sm">💰</div>
+                <p class="text-xs font-black uppercase tracking-widest text-slate-500">Pricing</p>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-xs font-black text-slate-700">Monthly Price <span class="text-rose-500">*</span></label>
+                  <div class="relative">
+                    <input type="number" [(ngModel)]="patientForm.priceMonthly"
+                      class="w-full rounded-xl border-2 px-4 py-3 pr-16 text-sm font-semibold text-slate-900 outline-none transition"
+                      [class]="formErrors['patientPriceMonthly'] ? 'border-rose-400 bg-rose-50' : 'border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-50'"
+                      placeholder="0.00" min="0" step="0.01" />
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg bg-teal-100 px-2 py-0.5 text-xs font-black text-teal-700">TND</span>
+                  </div>
+                  @if (formErrors['patientPriceMonthly']) {
+                    <p class="mt-1.5 text-xs font-bold text-rose-500">{{ formErrors['patientPriceMonthly'] }}</p>
+                  }
+                </div>
+                <div>
+                  <label class="mb-2 block text-xs font-black text-slate-700">Yearly Price <span class="text-rose-500">*</span></label>
+                  <div class="relative">
+                    <input type="number" [(ngModel)]="patientForm.priceYearly"
+                      class="w-full rounded-xl border-2 px-4 py-3 pr-16 text-sm font-semibold text-slate-900 outline-none transition"
+                      [class]="formErrors['patientPriceYearly'] ? 'border-rose-400 bg-rose-50' : 'border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-50'"
+                      placeholder="0.00" min="0" step="0.01" />
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg bg-teal-100 px-2 py-0.5 text-xs font-black text-teal-700">TND</span>
+                  </div>
+                  @if (formErrors['patientPriceYearly']) {
+                    <p class="mt-1.5 text-xs font-bold text-rose-500">{{ formErrors['patientPriceYearly'] }}</p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Section: Features -->
+            <div class="px-8 py-6">
+              <div class="mb-4 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-sm">⚡</div>
+                <p class="text-xs font-black uppercase tracking-widest text-slate-500">Features</p>
+                <span class="ml-auto rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-black text-teal-700">{{ getPatientFeaturesCount() }} enabled</span>
+              </div>
+              <div class="grid gap-2 sm:grid-cols-2">
+                @for (feat of [
+                  {label: 'AI Assistant', icon: '🤖', key: 'hasAI', desc: 'Smart health recommendations'},
+                  {label: 'Forum Access', icon: '💬', key: 'hasForum', desc: 'Community discussions'},
+                  {label: '24/7 Support', icon: '🕐', key: 'has24Support', desc: 'Round the clock help'},
+                  {label: 'Video Consultations', icon: '📹', key: 'hasVideoConsultations', desc: 'Face-to-face online visits'},
+                  {label: 'Health Records', icon: '📋', key: 'hasHealthRecords', desc: 'Digital medical history'},
+                  {label: 'Plan Active', icon: '✅', key: 'isActive', desc: 'Visible to users'}
+                ]; track feat.key) {
+                  <div class="group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-4 transition-all duration-200"
+                    [class]="getPatientFeature(feat.key)
+                      ? 'border-teal-400 bg-gradient-to-br from-teal-50 to-cyan-50 shadow-sm shadow-teal-100'
+                      : 'border-slate-200 bg-white hover:border-teal-200 hover:bg-slate-50'"
+                    (click)="setPatientFeature(feat.key, !getPatientFeature(feat.key))">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-start gap-3">
+                        <span class="text-xl">{{ feat.icon }}</span>
+                        <div>
+                          <p class="text-sm font-black text-slate-800">{{ feat.label }}</p>
+                          <p class="text-xs text-slate-400">{{ feat.desc }}</p>
+                        </div>
+                      </div>
+                      <div class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all"
+                        [class]="getPatientFeature(feat.key)
+                          ? 'border-teal-500 bg-teal-500'
+                          : 'border-slate-300 bg-white'">
+                        @if (getPatientFeature(feat.key)) {
+                          <svg class="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                          </svg>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Doctor Form -->
+        @else {
+          <div class="space-y-0 divide-y divide-slate-100">
+
+            <div class="px-8 py-6">
+              <div class="mb-4 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-sm">📋</div>
+                <p class="text-xs font-black uppercase tracking-widest text-slate-500">Basic Info</p>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-xs font-black text-slate-700">Plan Name <span class="text-rose-500">*</span></label>
+                  <input type="text" [(ngModel)]="doctorForm.name"
+                    class="w-full rounded-xl border-2 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition"
+                    [class]="formErrors['doctorName'] ? 'border-rose-400 bg-rose-50' : 'border-slate-200 bg-slate-50 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-50'"
+                    placeholder="e.g. GOLD" />
+                  @if (formErrors['doctorName']) {
+                    <p class="mt-1.5 text-xs font-bold text-rose-500">{{ formErrors['doctorName'] }}</p>
+                  }
+                </div>
+                <div>
+                  <label class="mb-2 block text-xs font-black text-slate-700">Max Consultations / Month</label>
+                  <input type="number" [(ngModel)]="doctorMaxConsultationsInput"
+                    class="w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-50"
+                    placeholder="Leave blank for unlimited" min="0" />
+                </div>
+              </div>
+            </div>
+
+            <div class="px-8 py-6">
+              <div class="mb-4 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-sm">💰</div>
+                <p class="text-xs font-black uppercase tracking-widest text-slate-500">Pricing</p>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-xs font-black text-slate-700">Monthly Price <span class="text-rose-500">*</span></label>
+                  <div class="relative">
+                    <input type="number" [(ngModel)]="doctorForm.priceMonthly"
+                      class="w-full rounded-xl border-2 px-4 py-3 pr-16 text-sm font-semibold text-slate-900 outline-none transition"
+                      [class]="formErrors['doctorPriceMonthly'] ? 'border-rose-400 bg-rose-50' : 'border-slate-200 bg-slate-50 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-50'"
+                      placeholder="0.00" min="0" step="0.01" />
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg bg-violet-100 px-2 py-0.5 text-xs font-black text-violet-700">TND</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="mb-2 block text-xs font-black text-slate-700">Yearly Price <span class="text-rose-500">*</span></label>
+                  <div class="relative">
+                    <input type="number" [(ngModel)]="doctorForm.priceYearly"
+                      class="w-full rounded-xl border-2 px-4 py-3 pr-16 text-sm font-semibold text-slate-900 outline-none transition"
+                      [class]="formErrors['doctorPriceYearly'] ? 'border-rose-400 bg-rose-50' : 'border-slate-200 bg-slate-50 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-50'"
+                      placeholder="0.00" min="0" step="0.01" />
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg bg-violet-100 px-2 py-0.5 text-xs font-black text-violet-700">TND</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="px-8 py-6">
+              <div class="mb-4 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-sm">⚡</div>
+                <p class="text-xs font-black uppercase tracking-widest text-slate-500">Features</p>
+                <span class="ml-auto rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-black text-violet-700">{{ getDoctorFeaturesCount() }} enabled</span>
+              </div>
+              <div class="grid gap-2 sm:grid-cols-2">
+                @for (feat of [
+                  {label: 'AI Assistant', icon: '🤖', key: 'hasAI', desc: 'Smart clinical insights'},
+                  {label: 'Advanced Analytics', icon: '📊', key: 'hasAdvancedAnalytics', desc: 'Deep performance data'},
+                  {label: 'Appointment Scheduling', icon: '📅', key: 'hasAppointmentScheduling', desc: 'Automated booking'},
+                  {label: 'Patient Management', icon: '👥', key: 'hasPatientManagement', desc: 'Full patient records'},
+                  {label: 'Telemedicine', icon: '🩺', key: 'hasTelemedicine', desc: 'Remote consultations'},
+                  {label: 'Plan Active', icon: '✅', key: 'isActive', desc: 'Visible to doctors'}
+                ]; track feat.key) {
+                  <div class="group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-4 transition-all duration-200"
+                    [class]="getDoctorFeature(feat.key)
+                      ? 'border-violet-400 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-sm shadow-violet-100'
+                      : 'border-slate-200 bg-white hover:border-violet-200 hover:bg-slate-50'"
+                    (click)="setDoctorFeature(feat.key, !getDoctorFeature(feat.key))">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-start gap-3">
+                        <span class="text-xl">{{ feat.icon }}</span>
+                        <div>
+                          <p class="text-sm font-black text-slate-800">{{ feat.label }}</p>
+                          <p class="text-xs text-slate-400">{{ feat.desc }}</p>
+                        </div>
+                      </div>
+                      <div class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all"
+                        [class]="getDoctorFeature(feat.key)
+                          ? 'border-violet-500 bg-violet-500'
+                          : 'border-slate-300 bg-white'">
+                        @if (getDoctorFeature(feat.key)) {
+                          <svg class="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                          </svg>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Modal footer -->
+      <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-8 py-5">
+        <button type="button"
+          class="rounded-xl border-2 border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
+          (click)="closePlanModal()">
+          Cancel
+        </button>
+        <button type="button"
+          class="rounded-xl px-6 py-2.5 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+          [class]="activeTab === 'patient' ? 'bg-gradient-to-r from-teal-600 to-cyan-600 shadow-teal-200' : 'bg-gradient-to-r from-violet-600 to-indigo-600 shadow-violet-200'"
+          (click)="saveActiveTabPlan()">
+          {{ modalMode === 'create' ? '+ Create Plan' : '✓ Save Changes' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Dialogs -->
+<app-confirmation-dialog
+  [isOpen]="showConfirmDialog"
+  [title]="confirmDialogTitle"
+  [message]="confirmDialogMessage"
+  [confirmText]="confirmDialogText"
+  [isDangerous]="isDangerousAction"
+  (confirmed)="onConfirmationConfirmed()"
+  (cancelled)="onConfirmationCancelled()">
+</app-confirmation-dialog>
+
+<app-plan-deletion-warning-dialog
+  [isVisible]="showDeletionWarning"
+  [planName]="pendingDeleteName"
+  [planType]="pendingDeleteType"
+  [subscriptions]="planSubscriptions"
+  (deactivate)="proceedWithDeactivatePlan()"
+  (cancel)="closeDeletionWarning()">
+</app-plan-deletion-warning-dialog>

@@ -1,0 +1,253 @@
+<section id="doctor-appointments" class="doctor-appointments">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">Espace Médecin</span>
+      <h2 class="section-title">Gérez vos <span class="gradient-text">Rendez-vous</span></h2>
+      <p class="section-description">
+        Consultez, acceptez et gérez les demandes de rendez-vous de vos patients
+      </p>
+    </div>
+
+    <div class="doctor-wrapper">
+
+      <!-- Liste des demandes de RDV -->
+      <div class="doctor-main">
+        <div class="requests-card">
+          <div class="card-header">
+            <i class="fas fa-calendar-alt"></i>
+            <h3>Demandes de Rendez-vous</h3>
+          </div>
+
+          <!-- Filtres -->
+          <div class="filter-tabs">
+            <button class="filter-tab" [class.active]="activeFilter === 'all'" (click)="applyFilter('all')">
+              Tous <span class="tab-count">{{ countByStatus('all') }}</span>
+            </button>
+            <button class="filter-tab" [class.active]="activeFilter === 'pending'" (click)="applyFilter('pending')">
+              En attente <span class="tab-count pending">{{ countByStatus('pending') }}</span>
+            </button>
+            <button class="filter-tab" [class.active]="activeFilter === 'confirmed'" (click)="applyFilter('confirmed')">
+              Confirmés <span class="tab-count confirmed">{{ countByStatus('confirmed') }}</span>
+            </button>
+            <button class="filter-tab" [class.active]="activeFilter === 'cancelled'" (click)="applyFilter('cancelled')">
+              Annulés <span class="tab-count cancelled">{{ countByStatus('cancelled') }}</span>
+            </button>
+          </div>
+
+          <!-- Liste RDV -->
+          <div class="rdv-list">
+            <div *ngIf="filteredAppointments.length === 0" class="empty-state">
+              <i class="fas fa-calendar-times"></i>
+              <p>Aucun rendez-vous trouvé</p>
+            </div>
+
+            <div class="rdv-item"
+                 *ngFor="let rdv of filteredAppointments"
+                 [attr.data-status]="rdv.status?.toLowerCase()"
+                 [class.rdv-urgent]="isUrgent(rdv)">
+
+              <!-- ✅ Bandeau urgent -->
+              <div class="urgent-banner" *ngIf="isUrgent(rdv)">
+                <i class="fas fa-exclamation-circle"></i> Cas urgent
+              </div>
+
+              <div class="rdv-date-block"
+                   [class.confirmed]="rdv.status === 'CONFIRMED'"
+                   [class.cancelled]="rdv.status === 'CANCELLED'"
+                   [class.done]="rdv.status === 'DONE'">
+                <span class="rdv-day">{{ getDay(rdv.date!) }}</span>
+                <span class="rdv-month">{{ getMonth(rdv.date!) }}</span>
+              </div>
+
+              <div class="rdv-info">
+                <div class="rdv-patient">
+                  <div class="patient-avatar"
+                       [class.confirmed]="rdv.status === 'CONFIRMED'"
+                       [class.cancelled]="rdv.status === 'CANCELLED'">
+                    {{ getInitials(rdv.patientNom || 'Patient') }}
+                  </div>
+                  <div class="patient-details">
+                    <h5>{{ rdv.patientNom }}</h5>
+                    <p><i class="fas fa-id-card"></i> Patient ID: #{{ rdv.patientId }}</p>
+                  </div>
+                </div>
+
+                <div class="rdv-meta">
+                  <span><i class="fas fa-clock"></i> {{ rdv.heure }}</span>
+                  <span><i class="fas fa-stethoscope"></i> {{ rdv.specialite }}</span>
+                  <span class="rdv-motif">"{{ rdv.motif }}"</span>
+                </div>
+              </div>
+
+              <div class="rdv-status-badge"
+                   [class.pending]="rdv.status === 'PENDING'"
+                   [class.confirmed]="rdv.status === 'CONFIRMED'"
+                   [class.cancelled]="rdv.status === 'CANCELLED'"
+                   [class.done]="rdv.status === 'DONE'">
+                <span *ngIf="rdv.status === 'PENDING'">En attente</span>
+                <span *ngIf="rdv.status === 'CONFIRMED'">Confirmé</span>
+                <span *ngIf="rdv.status === 'CANCELLED'">Annulé</span>
+                <span *ngIf="rdv.status === 'DONE'">Terminé</span>
+              </div>
+
+              <!-- ✅ TOGGLE URGENT -->
+              <div class="rdv-urgent-toggle">
+                <label class="urgent-label" [class.is-urgent]="isUrgent(rdv)">
+                  
+                  <input
+                    type="checkbox"
+                    class="urgent-checkbox"
+                    [checked]="isUrgent(rdv)"
+                    (change)="toggleUrgent(rdv, $event)"
+                  />
+
+                  <span class="urgent-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                  </span>
+
+                  <span class="urgent-text">
+                    {{ isUrgent(rdv) ? 'Urgent' : 'Marquer urgent' }}
+                  </span>
+
+                </label>
+              </div>
+
+              <!-- Actions -->
+              <div class="rdv-actions">
+                <ng-container *ngIf="rdv.status === 'PENDING'">
+                  <button class="btn-accept" (click)="accept(rdv)">
+                    <i class="fas fa-check"></i> Accepter
+                  </button>
+                  <button class="btn-refuse" (click)="openConfirmModal(rdv, 'refuse')">
+                    <i class="fas fa-times"></i> Refuser
+                  </button>
+                </ng-container>
+
+                <ng-container *ngIf="rdv.status === 'CONFIRMED'">
+                  <button class="btn-done" (click)="markAsDone(rdv)">
+                    <i class="fas fa-check-double"></i> Terminé
+                  </button>
+                  <button class="btn-cancel" (click)="openConfirmModal(rdv, 'cancel')">
+                    <i class="fas fa-ban"></i> Annuler
+                  </button>
+                </ng-container>
+
+                <button class="btn-details" title="Voir détails">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar médecin -->
+      <div class="doctor-sidebar">
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="profile-avatar">
+              <i class="fas fa-user-md"></i>
+            </div>
+            <div class="profile-info">
+              <h4>{{ medecinNom }}</h4>
+              <p>{{ medecinSpecialite }} · ID: #{{ medecinId }}</p>
+            </div>
+            <button class="btn-icon">
+              <i class="fas fa-cog"></i>
+            </button>
+          </div>
+
+          <div class="profile-stats">
+            <div class="stat">
+              <i class="fas fa-calendar-check"></i>
+              <div>
+                <strong>{{ countByStatus('all') }}</strong>
+                <span>RDV total</span>
+              </div>
+            </div>
+            <div class="stat">
+              <i class="fas fa-check-double"></i>
+              <div>
+                <strong>{{ countByStatus('done') }}</strong>
+                <span>Terminés</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-dossier-medical" (click)="goToDashboard()">
+            <i class="fas fa-chart-line"></i>
+            Accéder au Dashboard
+          </button>
+
+          <button class="btn-dossier-medical" (click)="goToCalendar()">
+            <i class="fas fa-calendar-week"></i>
+            Voir mon planning
+          </button>
+        </div>
+
+        <div class="quick-stats-card">
+          <div class="section-title-small">
+            <i class="fas fa-chart-bar"></i>
+            <h4>Vue d'ensemble</h4>
+          </div>
+
+          <div class="today-stats">
+            <div class="today-stat pending">
+              <div class="today-stat-icon"><i class="fas fa-hourglass-half"></i></div>
+              <div>
+                <strong>{{ countByStatus('pending') }}</strong>
+                <span>En attente</span>
+              </div>
+            </div>
+
+            <div class="today-stat confirmed">
+              <div class="today-stat-icon"><i class="fas fa-check-circle"></i></div>
+              <div>
+                <strong>{{ countByStatus('confirmed') }}</strong>
+                <span>Confirmés</span>
+              </div>
+            </div>
+
+            <div class="today-stat done">
+              <div class="today-stat-icon"><i class="fas fa-check-double"></i></div>
+              <div>
+                <strong>{{ countByStatus('done') }}</strong>
+                <span>Terminés</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" [class.show]="showModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>Confirmer l'action</h3>
+        <button class="close-btn" (click)="closeModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p>Êtes-vous sûr de vouloir
+          <strong>{{ modalAction === 'refuse' ? 'refuser' : 'annuler' }}</strong>
+          ce rendez-vous ?
+        </p>
+        <p class="warning">Cette action sera notifiée au patient.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModal()">Annuler</button>
+        <button class="btn-danger" (click)="confirmAction()">
+          <i class="fas fa-check"></i> Confirmer
+        </button>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,72 @@
+<section id="appointments" class="appointments">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-badge">Gestion des Rendez-vous</span>
+            <h2 class="section-title">Prenez votre <span class="gradient-text">Rendez-vous</span></h2>
+            <p class="section-description">
+                Planifiez vos consultations en quelques clics et gérez votre profil médical
+            </p>
+             <button class="btn btn-history-main" (click)="openHistory()">
+                <i class="fas fa-history"></i> Voir mon historique
+            </button>
+        </div>
+
+        <div class="appointment-wrapper">
+            <!-- Appointment Booking -->
+            <app-booking-appointment 
+                (appointmentAdded)="onAppointmentAdded($event)"
+                (appointmentUpdated)="onAppointmentUpdated($event)">
+            </app-booking-appointment>
+
+            <!-- My Appointments & Profile -->
+            <div class="appointments-sidebar">
+                <!-- Profile Card -->
+                <app-info-appointment></app-info-appointment>
+
+                <!-- Upcoming Appointments -->
+                <app-appointment-list 
+                    (editRequested)="onEditAppointment($event)" 
+                    #reminder>
+                </app-appointment-list>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Modal Historique -->
+<div class="history-overlay" *ngIf="showHistory" (click)="closeHistory()">
+    <div class="history-modal" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <i class="fas fa-history" style="color:var(--primary); font-size:1.5rem;"></i>
+                <h3>Historique des rendez-vous</h3>
+            </div>
+            <button class="close-btn" (click)="closeHistory()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="history-body">
+            <div *ngIf="doneAppointments.length === 0" class="empty-history">
+                <i class="fas fa-calendar-times"></i>
+                <p>Aucun rendez-vous terminé</p>
+            </div>
+
+            <div *ngFor="let app of doneAppointments" class="history-item">
+                <div class="appointment-date">
+                    <div class="date-number">{{formatDate(app.date, 'dd')}}</div>
+                    <div class="date-month">{{formatDate(app.date, 'MMM')}}</div>
+                </div>
+                <div class="appointment-details">
+                    <h5>{{app.medecin || app.laboratoire || 'Non spécifié'}}</h5>
+                    <p><i class="fas fa-stethoscope"></i> {{app.specialite || 'Non spécifiée'}}</p>
+                    <p><i class="fas fa-clock"></i> {{app.heure}}</p>
+                </div>
+                <span class="status-badge confirmed">
+                    <i class="fas fa-check-circle"></i> Terminé
+                </span>
+            </div>
+        </div>
+
+    </div>
+</div>

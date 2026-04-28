@@ -1,0 +1,580 @@
+<!-- STYLES À INJECTER DANS VOTRE COMPOSANT (styles.scss ou component.scss) -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600;9..144,700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --ink: #0d1117;
+  --ink-2: #3d4350;
+  --ink-3: #6b7280;
+  --ink-4: #9ca3af;
+  --paper: #fafaf9;
+  --surface: #ffffff;
+  --surface-2: #f5f4f2;
+  --border: #e5e2dd;
+  --teal: #0d9488;
+  --teal-light: #f0fdfa;
+  --emerald: #059669;
+  --amber: #d97706;
+  --red: #dc2626;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.07), 0 2px 6px rgba(0,0,0,.04);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+</style>
+
+<!-- MAIN CONTENT -->
+<div class="forum-shell">
+  <div class="forum-inner">
+
+    <!-- LEFT COLUMN -->
+    <div class="forum-left">
+
+      <!-- Disclaimer -->
+      <div class="disclaimer">
+        <span class="disclaimer-icon">⚠️</span>
+        <p>
+          Les informations partagées ici sont <strong>à titre informatif uniquement</strong>.
+          En cas d'urgence, appelez le <strong>15</strong>.
+        </p>
+      </div>
+
+      <!-- Search + Voice + New Post -->
+      <div class="toolbar">
+        <div style="display: flex; gap: 8px; align-items: center; flex: 1;">
+          <div class="search-wrap" style="flex: 1;">
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+            </svg>
+            <input
+              type="text"
+              [(ngModel)]="searchQuery"
+              (input)="onSearch()"
+              placeholder="Rechercher un sujet, symptôme..."
+              class="input-field"
+              appSpeakOnHover
+              speakText="Rechercher des discussions médicales"
+            />
+          </div>
+          
+          <!-- BOUTON DE RECHERCHE VOCALE -->
+          <app-voice-search (voiceQuery)="onVoiceSearch($event)"></app-voice-search>
+        </div>
+
+        <input
+          type="text"
+          [(ngModel)]="tagFilter"
+          (input)="applyFilters()"
+          placeholder="Filtrer par tag (#diabète...)"
+          class="input-field tag-input"
+          appSpeakOnHover
+          speakText="Filtrer par tag, comme diabète ou covid"
+        />
+
+        <button (click)="newPost()" class="btn-new" appSpeakOnHover speakText="Créer un nouveau post">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+          </svg>
+          Nouveau post
+        </button>
+      </div>
+
+      <!-- Category Tabs -->
+      <div class="cat-tabs">
+        <button
+          *ngFor="let cat of categories"
+          (click)="filterByCategory(cat.value)"
+          [ngClass]="activeCategory === cat.value ? 'cat-tab active' : 'cat-tab'"
+          appSpeakOnHover
+          [speakText]="'Catégorie ' + cat.label"
+        >
+          {{ cat.icon }} {{ cat.label }}
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="skeleton-list">
+        <div *ngFor="let i of [1,2,3]" class="skeleton"></div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && filteredPosts.length === 0" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3 appSpeakOnHover speakText="Aucun post trouvé">Aucun post trouvé</h3>
+        <p appSpeakOnHover speakText="Essayez d'autres mots-clés ou créez le premier post">
+          Essayez d'autres mots-clés ou créez le premier post !
+        </p>
+      </div>
+
+      <!-- Posts List -->
+      <div *ngIf="!isLoading" class="post-list">
+        <div
+          *ngFor="let post of filteredPosts"
+          (click)="openPost(post.id)"
+          class="post-card"
+          [style.border-left-color]="getAccentColor(post.category)">
+
+          <div class="post-inner">
+            <!-- Badges -->
+            <div class="post-badges">
+              <span class="badge" 
+                    [ngClass]="getCatClasses(post.category)"
+                    appSpeakOnHover 
+                    [speakText]="'Catégorie: ' + getCatLabel(post.category)">
+                {{ getCatIcon(post.category) }} {{ getCatLabel(post.category) }}
+              </span>
+              <span *ngIf="post.isVerifiedByDoctor" 
+                    class="badge badge-verified"
+                    appSpeakOnHover 
+                    speakText="Vérifié par un médecin">
+                <span class="badge-dot"></span>
+                Vérifié médecin
+              </span>
+              <span *ngIf="post.pinned" 
+                    class="badge badge-pinned"
+                    appSpeakOnHover 
+                    speakText="Post épinglé">
+                📌 Épinglé
+              </span>
+            </div>
+
+            <!-- Tags -->
+            <div *ngIf="post.tags?.length" class="post-tags">
+              <span *ngFor="let tag of post.tags" 
+                    class="post-tag"
+                    appSpeakOnHover 
+                    [speakText]="'Tag: ' + tag">
+                #{{ tag }}
+              </span>
+            </div>
+
+            <!-- Title -->
+            <h3 class="post-title" 
+                appSpeakOnHover 
+                [speakText]="post.title" 
+                speakRate="0.9">
+              {{ post.title }}
+            </h3>
+
+            <!-- Content Preview -->
+            <p class="post-excerpt" 
+               appSpeakOnHover 
+               [speakText]="post.content" 
+               speakDelay="500">
+              {{ post.content }}
+            </p>
+
+            <!-- Meta -->
+            <div class="post-meta">
+              <div class="author-info">
+                <div class="author-avatar" 
+                     [ngClass]="post.author.role === 'DOCTOR' ? 'avatar-doctor' : 'avatar-patient'"
+                     appSpeakOnHover 
+                     [speakText]="'Initiales ' + post.author.initials">
+                  {{ post.author.initials }}
+                </div>
+                <span class="author-name" 
+                      appSpeakOnHover 
+                      [speakText]="post.author.fullName">
+                  {{ post.author.fullName }}
+                </span>
+                <span *ngIf="post.author.role === 'DOCTOR'" 
+                      class="author-role-badge"
+                      appSpeakOnHover 
+                      speakText="Médecin">
+                  Médecin
+                </span>
+              </div>
+              <span class="post-date" 
+                    appSpeakOnHover 
+                    [speakText]="'Publié le ' + (post.createdAt | date:'dd MMM yyyy')">
+                {{ post.createdAt | date:'dd MMM yyyy' }}
+              </span>
+              <div class="post-stats">
+                <span class="stat" appSpeakOnHover [speakText]="post.viewCount + ' vues'">
+                  👁 {{ post.viewCount }}
+                </span>
+                <span class="stat" appSpeakOnHover [speakText]="(post.commentCount || 0) + ' commentaires'">
+                  💬 {{ post.commentCount || 0 }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="sidebar">
+
+      <!-- Stats -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-head">
+          <h3 appSpeakOnHover speakText="Statistiques du forum">📊 Statistiques</h3>
+        </div>
+        <div class="sidebar-card-body">
+          <div class="stats-grid">
+            <div class="stat-cell" appSpeakOnHover [speakText]="posts.length + ' posts'">
+              <div class="stat-number teal">{{ posts.length }}</div>
+              <div class="stat-label">Posts</div>
+            </div>
+            <div class="stat-cell" appSpeakOnHover speakText="3 médecins">
+              <div class="stat-number emerald">3</div>
+              <div class="stat-label">Médecins</div>
+            </div>
+            <div class="stat-cell" appSpeakOnHover speakText="47 membres">
+              <div class="stat-number blue">47</div>
+              <div class="stat-label">Membres</div>
+            </div>
+            <div class="stat-cell" appSpeakOnHover speakText="12 réponses">
+              <div class="stat-number violet">12</div>
+              <div class="stat-label">Réponses</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rules -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-head">
+          <h3 appSpeakOnHover speakText="Règles du forum">📋 Règles du forum</h3>
+        </div>
+        <div class="sidebar-card-body">
+          <div class="rule-list">
+            <div class="rule-item" appSpeakOnHover speakText="Respectez les autres membres">
+              <span class="rule-icon">🤝</span> Respectez les autres membres
+            </div>
+            <div class="rule-item" appSpeakOnHover speakText="Protégez vos données personnelles">
+              <span class="rule-icon">🔒</span> Protégez vos données personnelles
+            </div>
+            <div class="rule-item" appSpeakOnHover speakText="Pas de diagnostic en ligne">
+              <span class="rule-icon">⚕️</span> Pas de diagnostic en ligne
+            </div>
+            <div class="rule-item" appSpeakOnHover speakText="Citez des sources fiables">
+              <span class="rule-icon">✅</span> Citez des sources fiables
+            </div>
+            <div class="rule-item" appSpeakOnHover speakText="Pas de publicité ni spam">
+              <span class="rule-icon">🚫</span> Pas de publicité ni spam
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Urgence -->
+      <div class="urgence-card">
+        <p class="urgence-title" appSpeakOnHover speakText="Urgence médicale">🚨 Urgence médicale ?</p>
+        <p class="urgence-sub" appSpeakOnHover speakText="N'attendez pas une réponse, contactez les secours">
+          N'attendez pas une réponse. Contactez les secours.
+        </p>
+        <div class="urgence-cta" appSpeakOnHover speakText="Appelez le 15">
+          📞 Appelez le 15
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- CSS DU COMPOSANT -->
+<style>
+/* ─── LAYOUT ─── */
+.forum-shell {
+  min-height: 100vh;
+  background: #fafaf9;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% -10%, rgba(13,148,136,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 100%, rgba(5,150,105,.04) 0%, transparent 60%);
+  font-family: 'DM Sans', sans-serif;
+}
+.forum-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 36px 40px 60px;
+  display: grid;
+  grid-template-columns: 1fr 288px;
+  gap: 28px;
+  align-items: start;
+}
+.forum-left { min-width: 0; }
+
+/* ─── DISCLAIMER ─── */
+.disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  margin-bottom: 22px;
+}
+.disclaimer-icon { font-size: 16px; flex-shrink: 0; }
+.disclaimer p { font-size: 12.5px; color: #92400e; line-height: 1.5; }
+.disclaimer strong { color: #78350f; font-weight: 600; }
+
+/* ─── TOOLBAR ─── */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.search-wrap { flex: 1; min-width: 200px; position: relative; }
+.search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 15px; height: 15px; color: #9ca3af; pointer-events: none;
+}
+.input-field {
+  width: 100%;
+  padding: 0 12px 0 36px;
+  height: 40px;
+  background: #fff;
+  border: 1px solid #e5e2dd;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #0d1117;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input-field::placeholder { color: #9ca3af; }
+.input-field:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13,148,136,.10);
+}
+.tag-input {
+  width: 190px;
+  padding: 0 12px;
+  height: 40px;
+  background: #fff;
+  border: 1px solid #e5e2dd;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #0d1117;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.tag-input::placeholder { color: #9ca3af; }
+.tag-input:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13,148,136,.10);
+}
+.btn-new {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 18px; height: 40px;
+  background: #0d9488; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+  white-space: nowrap; font-family: inherit;
+}
+.btn-new svg { width: 14px; height: 14px; }
+.btn-new:hover {
+  background: #0f766e;
+  box-shadow: 0 4px 12px rgba(13,148,136,.3);
+  transform: translateY(-1px);
+}
+
+/* ─── CATEGORY TABS ─── */
+.cat-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+.cat-tab {
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 12px; font-weight: 500;
+  border: 1px solid #e5e2dd;
+  background: #fff; color: #6b7280;
+  cursor: pointer; transition: all .15s;
+  font-family: inherit;
+}
+.cat-tab:hover { background: #f5f4f2; color: #0d1117; }
+.cat-tab.active { background: #0d9488; color: #fff; border-color: #0d9488; }
+
+/* ─── LOADING ─── */
+.skeleton-list { display: flex; flex-direction: column; gap: 10px; }
+.skeleton {
+  background: linear-gradient(90deg, #f5f4f2 25%, #ece9e3 50%, #f5f4f2 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 14px; height: 120px;
+  border: 1px solid #e5e2dd;
+}
+@keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:-100% 0} }
+
+/* ─── EMPTY STATE ─── */
+.empty-state {
+  text-align: center; padding: 56px 20px;
+  background: #fff;
+  border: 1px dashed #ccc8c0;
+  border-radius: 14px;
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 18px; font-weight: 600;
+  color: #0d1117; margin-bottom: 6px;
+}
+.empty-state p { font-size: 13.5px; color: #6b7280; }
+
+/* ─── POST CARDS ─── */
+.post-list { display: flex; flex-direction: column; gap: 10px; }
+.post-card {
+  background: #fff;
+  border: 1px solid #e5e2dd;
+  border-left: 3px solid #0d9488;
+  border-radius: 14px;
+  overflow: hidden; cursor: pointer;
+  transition: all .2s cubic-bezier(.4,0,.2,1);
+  animation: fadeUp .3s ease both;
+}
+.post-card:hover {
+  border-color: #d0d0cb;
+  box-shadow: 0 4px 16px rgba(0,0,0,.07), 0 2px 6px rgba(0,0,0,.04);
+  transform: translateY(-2px);
+}
+.post-card:hover .post-title { color: #0d9488; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.post-inner { padding: 18px 20px 16px 22px; }
+
+/* ─── BADGES ─── */
+.post-badges { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 100px;
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: .3px; text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.badge-verified { color: #059669; background: #f0fdf4; border-color: #bbf7d0 !important; margin-left: auto; }
+.badge-pinned   { color: #d97706; background: #fffbeb; border-color: #fde68a !important; }
+
+/* ─── TAGS ─── */
+.post-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.post-tag {
+  font-size: 11.5px; color: #0f766e;
+  background: #f0fdfa; border: 1px solid #99f6e4;
+  border-radius: 4px; padding: 1px 7px; font-weight: 500;
+}
+
+/* ─── TITLE & EXCERPT ─── */
+.post-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px; font-weight: 600;
+  color: #0d1117; line-height: 1.35;
+  margin-bottom: 6px; letter-spacing: -.2px;
+  transition: color .15s;
+}
+.post-excerpt {
+  font-size: 13.5px; color: #6b7280;
+  line-height: 1.6; margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── META ─── */
+.post-meta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding-top: 12px; border-top: 1px solid #e5e2dd;
+}
+.author-info { display: flex; align-items: center; gap: 6px; }
+.author-avatar {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.avatar-doctor  { background: linear-gradient(135deg, #059669, #0d9488); }
+.avatar-patient { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+.author-name { font-size: 12.5px; color: #3d4350; font-weight: 500; }
+.author-role-badge {
+  font-size: 9.5px; font-weight: 700; padding: 1px 6px;
+  border-radius: 4px; background: #d1fae5; color: #065f46;
+  border: 1px solid #a7f3d0; letter-spacing: .2px;
+}
+.post-date { font-size: 12px; color: #9ca3af; }
+.post-stats { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.stat { font-size: 12px; color: #9ca3af; display: flex; align-items: center; gap: 3px; }
+
+/* ─── SIDEBAR ─── */
+.sidebar { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 24px; }
+.sidebar-card {
+  background: #fff; border: 1px solid #e5e2dd;
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.sidebar-card-head {
+  padding: 14px 18px; border-bottom: 1px solid #e5e2dd;
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-card-head h3 {
+  font-size: 12.5px; font-weight: 600;
+  color: #3d4350; letter-spacing: .1px; text-transform: uppercase;
+}
+.sidebar-card-body { padding: 16px 18px; }
+
+/* Stats */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-cell {
+  background: #f5f4f2; border: 1px solid #e5e2dd;
+  border-radius: 8px; padding: 12px 14px; text-align: center;
+}
+.stat-number {
+  font-family: 'Fraunces', serif;
+  font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px;
+}
+.stat-number.teal   { color: #0d9488; }
+.stat-number.emerald{ color: #059669; }
+.stat-number.blue   { color: #2563eb; }
+.stat-number.violet { color: #7c3aed; }
+.stat-label { font-size: 11px; color: #9ca3af; font-weight: 500; }
+
+/* Rules */
+.rule-list { display: flex; flex-direction: column; gap: 10px; }
+.rule-item {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12.5px; color: #6b7280; line-height: 1.45;
+}
+.rule-icon {
+  width: 24px; height: 24px; flex-shrink: 0;
+  background: #f5f4f2; border: 1px solid #e5e2dd;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+}
+
+/* Urgence */
+.urgence-card {
+  background: #fff5f5; border: 1px solid #fecaca;
+  border-left: 3px solid #dc2626;
+  border-radius: 14px; padding: 18px;
+}
+.urgence-title { font-size: 13px; font-weight: 700; color: #991b1b; margin-bottom: 5px; }
+.urgence-sub   { font-size: 12px; color: #6b7280; margin-bottom: 12px; line-height: 1.5; }
+.urgence-cta {
+  display: flex; align-items: center; justify-content: center;
+  background: #dc2626; color: #fff;
+  border-radius: 8px; padding: 10px;
+  font-size: 14px; font-weight: 700;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 900px) {
+  .forum-inner { grid-template-columns: 1fr; padding: 24px 20px; }
+  .sidebar { position: static; }
+}
+@media (max-width: 580px) {
+  .toolbar { flex-direction: column; }
+  .tag-input { width: 100%; }
+  .cat-tab { font-size: 11px; padding: 5px 10px; }
+}
+</style>

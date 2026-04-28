@@ -1,0 +1,48 @@
+<div class="min-h-full bg-gray-50 py-12">
+  <div class="mx-auto w-full max-w-2xl px-8 text-center">
+    <div class="overflow-hidden rounded-[3.5rem] bg-white p-12 shadow-2xl ring-1 ring-gray-900/5">
+       <!-- Animated Checkmark -->
+       <div class="mx-auto mb-10 flex h-28 w-28 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/50">
+         <svg class="h-14 w-14 animate-in zoom-in duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+       </div>
+
+       <h1 class="text-4xl font-black tracking-tight text-gray-900">Plan Switched!</h1>
+       <p class="mt-4 text-base font-medium text-gray-500 leading-relaxed">
+         Your subscription has been successfully updated with the new tier.
+       </p>
+       <button (click)="describeThisPage()" 
+               class="mt-6 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+         🎧 Describe This Page
+       </button>
+       @if ((audioTourService.isPlaying$ | async) || (audioTourService.isPaused$ | async)) {
+         <div class="mt-6 flex gap-2">
+           <button (click)="audioTourService.pauseOrResume()"
+                   class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium">
+             {{ (audioTourService.isPaused$ | async) ? '▶ Resume' : '⏸ Pause' }}
+           </button>
+           <button (click)="audioTourService.stopTour()"
+                   class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium">
+             ⏹ Stop
+           </button>
+         </div>
+       }
+
+       <div class="mt-12 space-y-4">
+         <button routerLink="/subscription" class="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-gray-900 py-5 text-sm font-black text-white shadow-xl transition hover:bg-gray-800 hover:-translate-y-0.5">
+           Go to My Subscription
+           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+         </button>
+         <button (click)="goToDashboard()" class="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-5 text-sm font-bold text-gray-600 transition hover:bg-gray-50">
+           Main Dashboard
+         </button>
+       </div>
+    </div>
+    
+    <div class="mt-12 flex items-center justify-center gap-2">
+      <div class="h-px w-8 bg-gray-200"></div>
+      <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">MediConnect Billing Portal</p>
+      <div class="h-px w-8 bg-gray-200"></div>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,120 @@
+.voice-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0d9488, #0891b2);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(13,148,136,0.2);
+  flex-shrink: 0;
+}
+
+.voice-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(13,148,136,0.3);
+}
+
+.voice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+}
+
+.voice-btn.listening {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.mic-pulse {
+  animation: mic-wave 1.5s infinite;
+}
+
+@keyframes mic-wave {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.pulse-ring {
+  animation: ring-pulse 1.5s infinite;
+  transform-origin: center;
+}
+
+@keyframes ring-pulse {
+  0% { r: 10; opacity: 0.3; }
+  50% { r: 12; opacity: 0.5; }
+  100% { r: 10; opacity: 0.3; }
+}
+
+/* Classes pour lecteurs d'écran */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Mode contraste élevé */
+:host-context(body.high-contrast) .bg-white {
+  background-color: #ffffff !important;
+  border-color: #000000 !important;
+  color: #000000 !important;
+}
+
+:host-context(body.high-contrast) button {
+  border: 2px solid #000000 !important;
+}
+
+:host-context(body.high-contrast) .text-slate-500,
+:host-context(body.high-contrast) .text-slate-600,
+:host-context(body.high-contrast) .text-slate-700 {
+  color: #000000 !important;
+}
+
+:host-context(body.high-contrast) .border-slate-200,
+:host-context(body.high-contrast) .border-slate-300 {
+  border-color: #000000 !important;
+}
+
+/* Réduction des animations */
+:host-context(body.reduce-motion) *,
+:host-context(body.reduce-motion) *::before,
+:host-context(body.reduce-motion) *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+}
+
+/* Focus visible amélioré */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .voice-btn {
+    width: 40px;
+    height: 40px;
+  }
+}

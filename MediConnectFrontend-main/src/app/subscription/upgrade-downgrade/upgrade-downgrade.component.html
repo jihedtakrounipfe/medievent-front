@@ -1,0 +1,163 @@
+<div class="min-h-full bg-gray-50 py-12">
+  <div class="mx-auto w-full max-w-5xl px-8">
+    <div class="mb-10 text-center">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-teal-600">Plan Management</p>
+      <h2 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">Upgrade or Downgrade</h2>
+      <p class="mt-4 text-base text-gray-600">Change your subscription plan or billing cycle with automatic proration.</p>
+      <button (click)="describeThisPage()" 
+              class="mt-6 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+        🎧 Describe This Page
+      </button>
+      @if ((audioTourService.isPlaying$ | async) || (audioTourService.isPaused$ | async)) {
+        <div class="mt-6 flex gap-2">
+          <button (click)="audioTourService.pauseOrResume()"
+                  class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium">
+            {{ (audioTourService.isPaused$ | async) ? '▶ Resume' : '⏸ Pause' }}
+          </button>
+          <button (click)="audioTourService.stopTour()"
+                  class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium">
+            ⏹ Stop
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (error) {
+      <div class="mb-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
+        <div class="flex items-center gap-3">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <p class="font-semibold">{{ error }}</p>
+        </div>
+      </div>
+    }
+
+    @if (loading || plansLoading) {
+      <div class="flex flex-col items-center justify-center rounded-3xl border border-gray-200 bg-white p-20 shadow-sm">
+        <div class="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-teal-600"></div>
+        <p class="mt-4 font-medium text-gray-600">Synchronizing subscription state...</p>
+      </div>
+    } @else if (currentSubscription) {
+      <div class="grid gap-8 lg:grid-cols-3">
+        <!-- Sidebar: Current Context -->
+        <div class="space-y-6">
+          <div class="overflow-hidden rounded-3xl bg-white p-8 shadow-sm ring-1 ring-gray-200">
+            <h3 class="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Current Plan</h3>
+            <div class="mt-6 flex flex-col gap-4">
+               <div>
+                 <p class="text-2xl font-black text-teal-700 leading-tight">{{ currentSubscription.planName }}</p>
+                 <p class="text-sm font-bold text-gray-500">{{ currentSubscription.billingCycle }} Billing</p>
+               </div>
+               <div class="space-y-3 pt-6 border-t border-gray-100">
+                 <div class="flex justify-between text-xs">
+                   <span class="text-gray-400 font-bold uppercase tracking-widest">Unused Value</span>
+                   <span class="text-emerald-600 font-black">{{ currentSubscription.unusedValue | number: '1.2-2' }} TND</span>
+                 </div>
+                 <div class="flex justify-between text-xs">
+                   <span class="text-gray-400 font-bold uppercase tracking-widest">Days Left</span>
+                   <span class="text-gray-900 font-black">{{ currentSubscription.daysRemaining }} Days</span>
+                 </div>
+               </div>
+            </div>
+          </div>
+          
+          <button (click)="goBack()" class="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white py-4 text-sm font-bold text-gray-600 transition hover:bg-gray-50">
+             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+             Return to Dashboard
+          </button>
+        </div>
+
+        <!-- Main Content: New Selection -->
+        <div class="lg:col-span-2 space-y-8">
+          @if (!plansLoading && availablePlans.length > 0) {
+            <div class="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200">
+              <div class="bg-gray-50 px-8 py-4 border-b border-gray-100">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-gray-900">Choose New Plan</h3>
+              </div>
+              <div class="p-8">
+                 <div class="grid gap-4 sm:grid-cols-2">
+                   @for (plan of availablePlans; track plan.id) {
+                     <button (click)="selectNewPlan(plan)"
+                             [ngClass]="selectedNewPlan?.id === plan.id ? 'border-teal-600 bg-teal-50 ring-1 ring-teal-600' : 'border-gray-200 bg-white'"
+                             class="flex flex-col items-start rounded-2xl border p-6 transition hover:shadow-md text-left">
+                        <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Target Plan</span>
+                        <span class="mt-1 text-xl font-black text-gray-900">{{ plan.name }}</span>
+                        <span class="mt-4 text-xs font-black text-teal-600 uppercase">{{ plan.priceMonthly | number: '1.2-2' }} TND/Month</span>
+                     </button>
+                   }
+                 </div>
+              </div>
+            </div>
+
+            @if (selectedNewPlan) {
+              <div class="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200">
+                <div class="bg-gray-50 px-8 py-4 border-b border-gray-100">
+                  <h3 class="text-sm font-bold uppercase tracking-widest text-gray-900">New Billing Cycle</h3>
+                </div>
+                <div class="p-8">
+                   <div class="grid gap-4 sm:grid-cols-2">
+                     <button (click)="newBillingCycle = 'MONTHLY'; calculateComparison()"
+                             [ngClass]="newBillingCycle === 'MONTHLY' ? 'border-teal-600 bg-teal-50 ring-1 ring-teal-600' : 'border-gray-200 bg-white'"
+                             class="flex flex-col items-start rounded-2xl border p-6 transition hover:shadow-md text-left">
+                        <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Monthly Billing</span>
+                        <span class="mt-1 text-xl font-black text-gray-900">{{ formatPrice(getSelectedPlanPrice('MONTHLY')) }} TND</span>
+                     </button>
+                     <button (click)="newBillingCycle = 'YEARLY'; calculateComparison()"
+                             [ngClass]="newBillingCycle === 'YEARLY' ? 'border-teal-600 bg-teal-50 ring-1 ring-teal-600' : 'border-gray-200 bg-white'"
+                             class="flex flex-col items-start rounded-2xl border p-6 transition hover:shadow-md text-left">
+                        <div class="flex w-full items-center justify-between">
+                          <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Yearly Billing</span>
+                          <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 uppercase">Save 20%</span>
+                        </div>
+                        <span class="mt-1 text-xl font-black text-gray-900">{{ formatPrice(getSelectedPlanPrice('YEARLY')) }} TND</span>
+                     </button>
+                   </div>
+                </div>
+              </div>
+            }
+
+            @if (comparison) {
+              <div class="overflow-hidden rounded-3xl bg-gray-900 p-8 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h3 class="text-lg font-bold">Calculation Summary</h3>
+                <div class="mt-6 space-y-4">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-400">New Plan Rate</span>
+                    <span class="font-bold">{{ formatPrice(comparison.newPrice) }} TND</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-400">Prorated Credit Applied</span>
+                    <span class="font-bold text-emerald-400">-{{ formatPrice(comparison.unusedValue) }} TND</span>
+                  </div>
+                  @if (userCredit && userCredit.balance > 0) {
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-400">Account Balance Applied</span>
+                      <span class="font-bold text-emerald-400">-{{ formatPrice(comparison.creditApplied) }} TND</span>
+                    </div>
+                  }
+                  <div class="border-t border-white/10 pt-6 flex items-center justify-between">
+                    <span class="text-lg font-bold">Amount Due Now</span>
+                    @if (comparison.amountDue > 0) {
+                      <span class="text-3xl font-black text-white">DT {{ formatPrice(comparison.amountDue) }}</span>
+                    } @else {
+                      <span class="text-2xl font-black text-emerald-400">NO PAYMENT NEEDED</span>
+                    }
+                  </div>
+                </div>
+
+                <button (click)="confirmUpgradeDowngrade()" [disabled]="processing"
+                        class="mt-8 w-full rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-600 py-4 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-teal-500/30 disabled:opacity-50">
+                  {{ processing ? 'Processing...' : (comparison.amountDue > 0 ? 'Proceed to Secure Checkout' : 'Confirm Subscription Change') }}
+                </button>
+              </div>
+            }
+          } @else if (!plansLoading) {
+            <div class="flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-300 bg-white p-20 text-center shadow-sm">
+               <h3 class="text-xl font-bold text-gray-900">No Alternative Plans</h3>
+               <p class="mt-2 text-gray-500">There are no other plans compatible with your current role at this time.</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
+

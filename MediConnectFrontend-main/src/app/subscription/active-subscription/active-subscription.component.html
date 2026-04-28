@@ -1,0 +1,298 @@
+<div class="min-h-full bg-gray-50 py-12">
+  <div class="mx-auto w-full max-w-5xl px-8">
+    <div class="mb-10 text-center">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-teal-600">My Subscription</p>
+      <h2 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">Active Plan</h2>
+      <p class="mt-4 text-base text-gray-600">Manage your subscription details and billing preferences.</p>
+      <button (click)="startFullAudioTour()" 
+              class="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        🎧🚀 Start Audio Tour
+      </button>
+      <button (click)="describeThisPage()" 
+              class="mt-6 ml-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+        🎧 Describe This Page
+      </button>
+      @if ((audioTourService.isPlaying$ | async) || (audioTourService.isPaused$ | async)) {
+        <div class="mt-6 ml-4 flex gap-2">
+          <button (click)="audioTourService.pauseOrResume()"
+                  class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium">
+            {{ (audioTourService.isPaused$ | async) ? '▶ Resume' : '⏸ Pause' }}
+          </button>
+          <button (click)="audioTourService.stopTour()"
+                  class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium">
+            ⏹ Stop
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- Loading State -->
+    @if (loading) {
+      <div class="flex flex-col items-center justify-center rounded-3xl border border-gray-200 bg-white p-20 shadow-sm">
+        <div class="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-teal-600"></div>
+        <p class="mt-4 font-medium text-gray-600">Loading your subscription details...</p>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (error) {
+      <div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
+        <div class="flex items-center gap-3">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="font-semibold">{{ error }}</p>
+        </div>
+      </div>
+    }
+
+    <!-- Success Message -->
+    @if (message) {
+      <div class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-700 shadow-sm">
+        <div class="flex items-center gap-3">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          <p class="font-semibold">{{ message }}</p>
+        </div>
+      </div>
+    }
+
+    @if (subscription) {
+      <div class="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200">
+        <!-- Top Status Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-cyan-600 p-8 text-white">
+          <div class="flex items-center gap-4">
+            <h3 class="text-3xl font-black tracking-tight">{{ subscription.planName }}</h3>
+            <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-widest">{{ subscription.status }}</span>
+          </div>
+          <div class="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur-sm">
+            {{ subscription.billingCycle | titlecase }} Billing
+          </div>
+        </div>
+
+        <div class="p-8">
+          <!-- Information Grid -->
+          <div class="grid gap-6 md:grid-cols-3">
+            <div class="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Started On</p>
+              <p class="mt-1 text-lg font-bold text-gray-900">{{ subscription.startDate }}</p>
+            </div>
+            <div class="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Renews/Ends On</p>
+              <p class="mt-1 text-lg font-bold text-gray-900">{{ subscription.endDate }}</p>
+            </div>
+            <div class="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Payment Method</p>
+              <div class="mt-2 inline-flex items-center rounded-lg bg-teal-50 px-3 py-1 text-sm font-bold text-teal-700 ring-1 ring-teal-200">
+                {{ subscription.paymentProvider }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Invoice Section -->
+          <div class="mt-8 rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-gray-50 p-6 ring-1 ring-gray-100">
+            <div class="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+              <div>
+                <h4 class="text-lg font-bold text-gray-900">Latest Invoice</h4>
+                <p class="text-sm text-gray-500">View or download your payment receipt.</p>
+              </div>
+              @if (subscription.invoiceId) {
+                <div class="flex flex-wrap gap-3">
+                  <a [href]="getInvoiceViewUrl(subscription.invoiceId!)" target="_blank" rel="noopener" 
+                     class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 hover:shadow-sm">
+                    <svg class="h-4 w-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    View
+                  </a>
+                  <a [href]="getInvoiceDownloadUrl(subscription.invoiceId!)"
+                     class="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-teal-700 hover:shadow-lg">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Download
+                  </a>
+                </div>
+              } @else {
+                <div class="rounded-xl bg-gray-100 px-4 py-2 text-xs font-bold text-gray-500">Not Available</div>
+              }
+            </div>
+          </div>
+
+          <!-- Credit Summary -->
+          @if (!creditLoading && userCredit) {
+            <div class="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Available Credit</h4>
+                  <p class="mt-1 text-3xl font-black text-emerald-700">{{ userCredit.balance | number: '1.2-2' }} <span class="text-lg">TND</span></p>
+                  <p class="mt-1 text-xs font-medium text-emerald-600/70">Valid until {{ userCredit.expiresAt }}</p>
+                </div>
+                <button (click)="openCreditModal()" class="rounded-xl bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-200">
+                  Transaction History
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- Plan Management -->
+          <div class="mt-10 border-t border-gray-100 pt-10">
+            <div class="grid gap-8 md:grid-cols-2">
+              <div class="flex items-start justify-between rounded-2xl bg-gray-50 p-6 ring-1 ring-gray-100">
+                <div>
+                  <h4 class="text-base font-bold text-gray-900">Auto-Renew</h4>
+                  <p class="mt-1 text-xs text-gray-500">Keep your access uninterrupted.</p>
+                </div>
+                <label class="relative inline-flex cursor-pointer items-center">
+                  <input type="checkbox" [checked]="subscription.autoRenew" (change)="toggleAutoRenew()" class="peer sr-only">
+                  <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-teal-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300"></div>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between rounded-2xl bg-gray-50 p-6 ring-1 ring-gray-100">
+                <button (click)="changeBillingCycle()" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-50">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Switch Billing Cycle
+                </button>
+              </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="mt-8 rounded-2xl border border-rose-100 bg-rose-50/30 p-6">
+              <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                <div>
+                  <h4 class="text-base font-bold text-rose-900">Cancel Subscription</h4>
+                  <p class="text-xs text-rose-600/70">Cancel your plan anytime. Access remains until cycle end.</p>
+                </div>
+                <button (click)="cancelSubscription()" class="rounded-xl border border-rose-200 bg-white px-6 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 hover:text-rose-700">
+                  Cancel Plan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else if (!loading && !error) {
+  <div class="flex flex-col items-center justify-center py-24 text-center">
+    <div class="relative mb-8">
+      <div class="h-24 w-24 rounded-full bg-gradient-to-br from-teal-100 to-cyan-50 flex items-center justify-center ring-8 ring-teal-50">
+        <svg class="h-10 w-10 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+        </svg>
+      </div>
+      <div class="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-amber-400 flex items-center justify-center">
+        <svg class="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+        </svg>
+      </div>
+    </div>
+    <h3 class="text-2xl font-black tracking-tight text-gray-900">No active subscription</h3>
+    <p class="mt-3 max-w-sm text-sm text-gray-500 leading-relaxed">
+      You're not subscribed to any plan yet. Choose one that fits your needs and unlock premium features.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row gap-3">
+      <button routerLink="/plans"
+        class="rounded-2xl bg-teal-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-teal-100 transition hover:bg-teal-700 hover:shadow-teal-200">
+        Browse Plans
+      </button>
+      <button routerLink="/history"
+        class="rounded-2xl border border-gray-200 bg-white px-8 py-3 text-sm font-bold text-gray-600 transition hover:bg-gray-50">
+        View History
+      </button>
+    </div>
+    <div class="mt-16 grid grid-cols-3 gap-6 max-w-lg w-full">
+      @for (item of [
+        { icon: '✦', label: 'AI Features', desc: 'Smart health tools' },
+        { icon: '◈', label: 'Priority Care', desc: 'Fast-track access' },
+        { icon: '⬡', label: 'Full History', desc: 'All records saved' }
+      ]; track item.label) {
+        <div class="rounded-2xl border border-gray-100 bg-white p-5 text-center shadow-sm">
+          <span class="text-2xl text-teal-500">{{ item.icon }}</span>
+          <p class="mt-2 text-xs font-bold text-gray-900">{{ item.label }}</p>
+          <p class="mt-0.5 text-[11px] text-gray-400">{{ item.desc }}</p>
+        </div>
+      }
+    </div>
+  </div>
+}
+  </div>
+</div>
+
+<!-- Cancellation Modal -->
+@if (showCancelModal) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-br from-rose-500 to-rose-600 p-8 text-center text-white">
+        <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
+          <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <h3 class="text-xl font-black">Cancel Subscription</h3>
+        <p class="mt-1 text-sm text-rose-100">Help us improve — tell us why you're leaving</p>
+      </div>
+
+      <div class="p-6">
+        <!-- Reason Cards -->
+        <div class="grid grid-cols-2 gap-3">
+          @for (reason of [
+            { label: 'Too expensive', icon: '💰' },
+            { label: 'Missing features', icon: '🔧' },
+            { label: 'Too complicated', icon: '😕' },
+            { label: 'Don\'t need it now', icon: '⏸' },
+            { label: 'Switching services', icon: '🔄' },
+            { label: 'Other', icon: '💬' }
+          ]; track reason.label) {
+            <button
+              (click)="cancellationReason = reason.label"
+              [class]="'rounded-2xl border-2 p-4 text-left transition-all ' + 
+                (cancellationReason === reason.label 
+                  ? 'border-rose-500 bg-rose-50' 
+                  : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white')">
+              <span class="text-xl">{{ reason.icon }}</span>
+              <p [class]="'mt-2 text-xs font-bold ' + (cancellationReason === reason.label ? 'text-rose-700' : 'text-gray-700')">
+                {{ reason.label }}
+              </p>
+            </button>
+          }
+        </div>
+
+        <!-- Optional comment -->
+        @if (cancellationReason === 'Other') {
+          <textarea
+            [(ngModel)]="cancellationReason"
+            placeholder="Tell us more..."
+            class="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-100"
+            rows="3"></textarea>
+        }
+
+        @if (cancellationReasonError) {
+          <p class="mt-2 text-xs font-bold text-rose-600">{{ cancellationReasonError }}</p>
+        }
+        @if (cancelError) {
+          <p class="mt-2 text-xs font-bold text-rose-600">{{ cancelError }}</p>
+        }
+
+        <!-- Footer -->
+        <div class="mt-6 flex gap-3">
+          <button (click)="closeCancelModal()"
+            class="flex-1 rounded-2xl border border-gray-200 py-3 text-sm font-bold text-gray-600 transition hover:bg-gray-50">
+            Keep My Plan
+          </button>
+          <button (click)="confirmCancellation()"
+            [disabled]="cancelling || !cancellationReason"
+            class="flex-1 rounded-2xl bg-gradient-to-r from-rose-500 to-rose-600 py-3 text-sm font-bold text-white shadow-lg shadow-rose-100 transition hover:shadow-rose-200 disabled:opacity-40 disabled:cursor-not-allowed">
+            {{ cancelling ? 'Processing...' : 'Confirm Cancellation' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<app-credit-details-modal
+  [isOpen]="showCreditModal"
+  [credit]="userCredit"
+  (closed)="closeCreditModal()">
+</app-credit-details-modal>
+
+<app-plan-chat />
+

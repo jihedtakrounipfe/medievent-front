@@ -1,0 +1,548 @@
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute inset-0" style="background-image: linear-gradient(rgba(20,184,166,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(20,184,166,0.02) 1px, transparent 1px); background-size: 40px 40px;"></div>
+    <div class="absolute -top-40 -right-40 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-cyan-200/20 rounded-full blur-3xl"></div>
+    <div class="absolute inset-0 bg-gradient-to-br from-transparent via-white/30 to-teal-100/10"></div>
+  </div>
+
+  <div class="relative z-10">
+    <div class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
+      <div class="max-w-3xl mx-auto px-6 py-5">
+        <button (click)="goBack()" class="group flex items-center gap-2 text-slate-500 hover:text-teal-600 text-sm mb-4 transition-all">
+          <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          Retour au forum
+        </button>
+
+        <div class="flex items-start gap-4">
+          <div class="relative">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xl shadow-lg shadow-teal-500/20">✍️</div>
+            <div class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white"></div>
+          </div>
+          <div class="flex-1">
+            <h1 class="text-xl font-bold text-slate-800">Créer une publication</h1>
+            <p class="text-slate-500 text-sm">Partagez avec la communauté médicale MediConnect</p>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full transition-all duration-500" [style.width.%]="getCompletionPercentage()"></div>
+          </div>
+          <p class="text-right text-xs text-slate-500 mt-1 font-mono">{{ getCompletionPercentage() }}% complété</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto px-6 py-8">
+      <form #postForm="ngForm" (ngSubmit)="submit()" class="space-y-5">
+
+        <!-- CATEGORY -->
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-6 hover:border-teal-300 shadow-sm hover:shadow transition-all">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-1 h-5 bg-gradient-to-b from-teal-500 to-cyan-500 rounded-full"></div>
+              <label class="font-semibold text-slate-700 text-sm">Catégorie</label>
+              <span class="text-red-500 text-xs">*</span>
+            </div>
+            <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-full">{{ form.category ? '✓ Sélectionné' : '0/1' }}</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button *ngFor="let cat of categories" type="button" (click)="selectCategory(cat.value)"
+              [ngClass]="form.category === cat.value ? 'bg-gradient-to-br from-teal-600 to-cyan-600 text-white border-transparent shadow-lg shadow-teal-500/20 scale-105 ring-2 ring-teal-200' : 'bg-white border-slate-200 text-slate-600 hover:border-teal-300 hover:bg-teal-50/50 hover:text-teal-700'"
+              class="flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 cursor-pointer">
+              <span class="text-2xl">{{ cat.icon }}</span>
+              <span class="text-xs font-medium">{{ cat.label }}</span>
+              <span class="text-[10px] text-slate-500 text-center leading-tight">{{ cat.desc }}</span>
+            </button>
+          </div>
+          <div *ngIf="isFieldInvalid('category')" class="flex items-center gap-1.5 mt-3 text-red-600 text-xs">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            Veuillez sélectionner une catégorie
+          </div>
+        </div>
+
+        <!-- TITLE -->
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-6 hover:border-teal-300 shadow-sm hover:shadow transition-all">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-1 h-5 bg-gradient-to-b from-teal-500 to-cyan-500 rounded-full"></div>
+              <label class="font-semibold text-slate-700 text-sm">Titre</label>
+              <span class="text-red-500 text-xs">*</span>
+              <span class="text-slate-400 text-xs">(min. 3 caractères)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-full">{{ form.title.length }}/150</span>
+              <span *ngIf="form.title.length >= 3" class="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full">✓ Valide</span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <input #titleInput type="text" [(ngModel)]="form.title" name="title" required maxlength="150" (input)="validateField('title')"
+              placeholder="Ex: Quels sont les symptômes du diabète de type 2 ?"
+              [ngClass]="{'border-teal-500 ring-2 ring-teal-100': !isFieldInvalid('title') && form.title.length >= 3, 'border-red-300 bg-red-50/50': isFieldInvalid('title'), 'border-slate-300': !isFieldInvalid('title') && form.title.length < 3}"
+              class="w-full px-4 py-3 bg-white border rounded-xl text-slate-700 text-sm placeholder-slate-400 transition-all outline-none focus:border-teal-500"/>
+            <button type="button" (click)="toggleListening('title')" [class.listening]="isListeningFor === 'title'" [disabled]="!isSpeechSupported" class="voice-btn">
+              <svg *ngIf="isListeningFor !== 'title'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              <svg *ngIf="isListeningFor === 'title'" class="mic-pulse" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><circle cx="12" cy="12" r="10" class="pulse-ring"/></svg>
+            </button>
+          </div>
+          <div *ngIf="isFieldInvalid('title')" class="flex items-center gap-1.5 mt-2 text-red-600 text-xs">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            Le titre doit contenir au moins 3 caractères
+          </div>
+        </div>
+
+        <!-- CONTENT avec IA -->
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-6 hover:border-teal-300 shadow-sm hover:shadow transition-all">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-1 h-5 bg-gradient-to-b from-teal-500 to-cyan-500 rounded-full"></div>
+              <label class="font-semibold text-slate-700 text-sm">Contenu</label>
+              <span class="text-red-500 text-xs">*</span>
+              <span class="text-slate-400 text-xs">(min. 20 caractères)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-full">{{ form.content.length }}/5000</span>
+              <span *ngIf="form.content.length >= 20" class="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full">✓ Valide</span>
+            </div>
+          </div>
+
+          <!-- BOUTONS IA -->
+          <div class="flex gap-2 mb-3">
+            <button type="button" (click)="generateContentFromTitle()" [disabled]="isGeneratingContent || !form.title.trim() || !form.category" class="ai-btn generate-btn">
+              <span *ngIf="!isGeneratingContent">✨ Générer depuis le titre</span>
+              <span *ngIf="isGeneratingContent" class="flex items-center gap-2"><span class="spinner-small"></span>Génération...</span>
+            </button>
+            <button type="button" (click)="improveContent()" [disabled]="isImprovingContent || !form.content.trim()" class="ai-btn improve-btn">
+              <span *ngIf="!isImprovingContent">🪄 Améliorer le contenu</span>
+              <span *ngIf="isImprovingContent" class="flex items-center gap-2"><span class="spinner-small"></span>Amélioration...</span>
+            </button>
+          </div>
+
+          <div class="flex gap-2">
+            <textarea #contentInput [(ngModel)]="form.content" name="content" required maxlength="5000" rows="8" (input)="onContentChange()"
+              placeholder="Décrivez votre situation en détail. Plus c'est précis, plus les réponses seront utiles..."
+              [ngClass]="{'border-teal-500 ring-2 ring-teal-100': !isFieldInvalid('content') && form.content.length >= 20, 'border-red-300 bg-red-50/50': isFieldInvalid('content'), 'border-slate-300': !isFieldInvalid('content') && form.content.length < 20}"
+              class="w-full px-4 py-3 bg-white border rounded-xl text-slate-700 text-sm placeholder-slate-400 transition-all outline-none resize-none focus:border-teal-500"></textarea>
+            <button type="button" (click)="toggleListening('content')" [class.listening]="isListeningFor === 'content'" [disabled]="!isSpeechSupported" class="voice-btn">
+              <svg *ngIf="isListeningFor !== 'content'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              <svg *ngIf="isListeningFor === 'content'" class="mic-pulse" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><circle cx="12" cy="12" r="10" class="pulse-ring"/></svg>
+            </button>
+          </div>
+
+          <div class="mt-2 h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full transition-all duration-300" [style.width.%]="(form.content.length / 20) * 100 > 100 ? 100 : (form.content.length / 20) * 100"></div>
+          </div>
+
+          <!-- Statistiques -->
+          <div class="stats-panel mt-4">
+            <h4 class="stats-title">📊 Statistiques du contenu</h4>
+            <div class="stats-grid">
+              <div class="stat-item"><span class="stat-value">{{ stats.words }}</span><span class="stat-label">Mots</span></div>
+              <div class="stat-item"><span class="stat-value">{{ stats.characters }}</span><span class="stat-label">Caractères</span></div>
+              <div class="stat-item"><span class="stat-value">{{ stats.sentences }}</span><span class="stat-label">Phrases</span></div>
+              <div class="stat-item"><span class="stat-value">{{ stats.paragraphs }}</span><span class="stat-label">Paragraphes</span></div>
+              <div class="stat-item"><span class="stat-value">{{ stats.readingTime }}min</span><span class="stat-label">Lecture</span></div>
+              <div class="stat-item highlight"><span class="stat-value">{{ stats.medicalTerms }}</span><span class="stat-label">Termes médicaux</span></div>
+            </div>
+          </div>
+
+          <div *ngIf="isFieldInvalid('content')" class="flex items-center gap-1.5 mt-2 text-red-600 text-xs">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            Le contenu doit contenir au moins 20 caractères ({{ form.content.length }}/20)
+          </div>
+        </div>
+
+        <!-- UPLOAD FICHIERS AMÉLIORÉ (Images, Vidéos, PDFs) -->
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-6 hover:border-teal-300 shadow-sm hover:shadow transition-all">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-1 h-5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+              <label class="font-semibold text-slate-700 text-sm">Pièces jointes</label>
+              <span class="text-slate-400 text-xs">(optionnel)</span>
+            </div>
+            <div class="text-xs text-slate-500">
+              Total: {{ getAllFiles().length }} fichier(s) • {{ formatFileSize(getTotalFilesSize()) }}
+            </div>
+          </div>
+
+          <!-- Images -->
+          <div class="upload-section mb-5">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-slate-700">🖼️ Images</label>
+              <span class="text-xs text-slate-400">JPG, PNG, WEBP, BMP, GIF - Max 20 Mo (10 max)</span>
+            </div>
+            <div class="upload-zone-small" (click)="imageInput.click()" [class.has-files]="imageFiles.length > 0">
+              <input type="file" #imageInput multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.gif" (change)="onImageSelected($event)" class="hidden">
+              <div class="upload-icon-small">📷</div>
+              <span class="upload-text-small">Cliquez pour ajouter des images</span>
+              <span class="upload-hint-small" *ngIf="imageFiles.length > 0">{{ imageFiles.length }} image(s) sélectionnée(s)</span>
+            </div>
+            <div *ngIf="imageError" class="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+              {{ imageError }}
+            </div>
+            <div class="files-grid" *ngIf="imageFiles.length > 0">
+              <div *ngFor="let file of imageFiles; let i = index" class="file-card">
+                <div class="file-preview">
+                  <img *ngIf="file.preview && file.preview !== 'pdf-icon'" [src]="file.preview" class="preview-image">
+                  <div *ngIf="file.dimensions" class="file-metadata">
+                    {{ file.dimensions.width }}x{{ file.dimensions.height }}
+                  </div>
+                </div>
+                <div class="file-info">
+                  <div class="file-name" [title]="file.name">{{ file.name }}</div>
+                  <div class="file-size">{{ formatFileSize(file.size) }}</div>
+                </div>
+                <button type="button" (click)="removeImageFile(i)" class="file-remove" title="Supprimer">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vidéos -->
+          <div class="upload-section mb-5">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-slate-700">🎬 Vidéos</label>
+              <span class="text-xs text-slate-400">MP4, MOV, AVI, MKV, WEBM - Max 100 Mo (5 max)</span>
+            </div>
+            <div class="upload-zone-small" (click)="videoInput.click()" [class.has-files]="videoFiles.length > 0">
+              <input type="file" #videoInput multiple accept=".mp4,.mov,.avi,.mkv,.webm" (change)="onVideoSelected($event)" class="hidden">
+              <div class="upload-icon-small">🎥</div>
+              <span class="upload-text-small">Cliquez pour ajouter des vidéos</span>
+              <span class="upload-hint-small" *ngIf="videoFiles.length > 0">{{ videoFiles.length }} vidéo(s) sélectionnée(s)</span>
+            </div>
+            <div *ngIf="videoError" class="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+              {{ videoError }}
+            </div>
+            <div class="files-grid" *ngIf="videoFiles.length > 0">
+              <div *ngFor="let file of videoFiles; let i = index" class="file-card">
+                <div class="file-preview">
+                  <img *ngIf="file.preview && file.preview !== 'pdf-icon'" [src]="file.preview" class="preview-image">
+                  <div *ngIf="!file.preview || file.preview === 'pdf-icon'" class="video-placeholder">🎬</div>
+                  <div *ngIf="file.duration" class="file-metadata">
+                    {{ formatDuration(file.duration) }}
+                  </div>
+                </div>
+                <div class="file-info">
+                  <div class="file-name" [title]="file.name">{{ file.name }}</div>
+                  <div class="file-size">{{ formatFileSize(file.size) }}</div>
+                </div>
+                <button type="button" (click)="removeVideoFile(i)" class="file-remove" title="Supprimer">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PDFs -->
+          <div class="upload-section">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-slate-700">📄 Documents PDF</label>
+              <span class="text-xs text-slate-400">PDF - Max 20 Mo (10 max)</span>
+            </div>
+            <div class="upload-zone-small" (click)="pdfInput.click()" [class.has-files]="pdfFiles.length > 0">
+              <input type="file" #pdfInput multiple accept=".pdf" (change)="onPdfSelected($event)" class="hidden">
+              <div class="upload-icon-small">📄</div>
+              <span class="upload-text-small">Cliquez pour ajouter des documents PDF</span>
+              <span class="upload-hint-small" *ngIf="pdfFiles.length > 0">{{ pdfFiles.length }} PDF(s) sélectionné(s)</span>
+            </div>
+            <div *ngIf="pdfError" class="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+              {{ pdfError }}
+            </div>
+            <div class="files-grid" *ngIf="pdfFiles.length > 0">
+              <div *ngFor="let file of pdfFiles; let i = index" class="file-card">
+                <div class="file-preview">
+                  <div class="pdf-placeholder">📄</div>
+                </div>
+                <div class="file-info">
+                  <div class="file-name" [title]="file.name">{{ file.name }}</div>
+                  <div class="file-size">{{ formatFileSize(file.size) }}</div>
+                </div>
+                <button type="button" (click)="removePdfFile(i)" class="file-remove" title="Supprimer">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Message d'information sur les fichiers -->
+          <div *ngIf="getAllFiles().length > 0" class="mt-4 p-3 bg-teal-50 rounded-lg border border-teal-200">
+            <div class="flex items-center gap-2 text-xs text-teal-700">
+              <span>📎</span>
+              <span>Total: {{ getAllFiles().length }} fichier(s) joint(s) ({{ formatFileSize(getTotalFilesSize()) }})</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAGS -->
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-6 hover:border-teal-300 shadow-sm hover:shadow transition-all">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-1 h-5 bg-gradient-to-b from-teal-500 to-cyan-500 rounded-full"></div>
+              <label class="font-semibold text-slate-700 text-sm">Tags</label>
+              <span class="text-slate-400 text-xs ml-1">(optionnel - max 5)</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-2">
+            <span *ngFor="let tag of form.tags" class="inline-flex items-center gap-1 bg-teal-50 text-teal-700 text-xs px-2 py-0.5 rounded-full border border-teal-200">#{{ tag }}<button type="button" class="text-xs hover:text-teal-900" (click)="removeTag(tag)">&times;</button></span>
+          </div>
+          <input #tagInput type="text" placeholder="Ajouter un tag et appuyer sur Entrée" (keydown.enter)="onTagInputKeyDown($event)" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-700 text-sm placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-all"/>
+        </div>
+
+        <!-- READY TO PUBLISH -->
+        <div *ngIf="isFormValid()" class="rounded-2xl border border-emerald-300 bg-emerald-50/80 p-5 shadow-sm">
+          <div class="flex items-center gap-3 mb-3"><div class="w-7 h-7 rounded-full bg-emerald-500 border border-emerald-300 flex items-center justify-center text-white text-sm shadow-sm">✓</div><h3 class="font-semibold text-emerald-800 text-sm">Prêt à être publié !</h3></div>
+          <div class="flex flex-wrap gap-4">
+            <span class="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-100/50 px-2 py-1 rounded-full">✓ Catégorie sélectionnée</span>
+            <span class="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-100/50 px-2 py-1 rounded-full">✓ Titre : {{ form.title.length }} caractères</span>
+            <span class="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-100/50 px-2 py-1 rounded-full">✓ Contenu : {{ form.content.length }} caractères</span>
+          </div>
+        </div>
+
+        <!-- DISCLAIMER -->
+        <div class="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/80 shadow-sm">
+          <span class="text-amber-600 text-base mt-0.5 flex-shrink-0">⚠️</span>
+          <p class="text-xs text-amber-800/70 leading-relaxed">Les informations partagées sont <span class="text-amber-800 font-semibold">à titre informatif uniquement</span> et ne remplacent pas l'avis d'un professionnel de santé.</p>
+        </div>
+
+        <!-- ERROR -->
+        <div *ngIf="errorMessage" class="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+          <span class="text-red-500 flex-shrink-0">⚠️</span>
+          <p class="text-sm text-red-700">{{ errorMessage }}</p>
+        </div>
+
+        <!-- BUTTONS -->
+        <div class="flex gap-3 pt-2 pb-8">
+          <button type="button" (click)="goBack()" class="flex-1 py-3.5 rounded-xl bg-white border-2 border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all">Annuler</button>
+          <button type="submit" [disabled]="!isFormValid() || isSubmitting" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2">
+            <ng-container *ngIf="!isSubmitting"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg><span>Publier le post</span></ng-container>
+            <ng-container *ngIf="isSubmitting"><svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg><span>Publication en cours...</span></ng-container>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .voice-btn { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0d9488, #0891b2); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(13,148,136,0.2); flex-shrink: 0; }
+  .voice-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 4px 12px rgba(13,148,136,0.3); }
+  .voice-btn:disabled { opacity: 0.5; cursor: not-allowed; background: linear-gradient(135deg, #94a3b8, #64748b); }
+  .voice-btn.listening { background: linear-gradient(135deg, #ef4444, #dc2626); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  .mic-pulse { animation: mic-wave 1.5s infinite; }
+  @keyframes mic-wave { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+  .pulse-ring { animation: ring-pulse 1.5s infinite; transform-origin: center; }
+  @keyframes ring-pulse { 0% { r: 10; opacity: 0.3; } 50% { r: 12; opacity: 0.5; } 100% { r: 10; opacity: 0.3; } }
+
+  .ai-btn { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; }
+  .generate-btn { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; }
+  .generate-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
+  .improve-btn { background: linear-gradient(135deg, #0d9488, #0891b2); color: white; }
+  .improve-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); }
+  .ai-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .spinner-small { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+
+  .stats-panel { margin-top: 16px; padding: 16px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 12px; border: 1px solid #e2e8f0; }
+  .stats-title { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; }
+  .stat-item { text-align: center; padding: 8px 4px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+  .stat-item.highlight { background: linear-gradient(135deg, #0d9488, #0891b2); border-color: #0d9488; }
+  .stat-item.highlight .stat-value, .stat-item.highlight .stat-label { color: white; }
+  .stat-value { display: block; font-size: 18px; font-weight: 700; color: #0f172a; line-height: 1.2; }
+  .stat-label { display: block; font-size: 9px; font-weight: 500; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  /* Styles améliorés pour l'upload */
+  .upload-section {
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+  }
+
+  .upload-section:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+  }
+
+  .upload-zone-small {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .upload-zone-small:hover {
+    border-color: #0d9488;
+    background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
+    transform: translateY(-2px);
+  }
+
+  .upload-zone-small.has-files {
+    border-color: #0d9488;
+    background: #f0fdfa;
+  }
+
+  .upload-icon-small {
+    font-size: 32px;
+    margin-bottom: 8px;
+    color: #94a3b8;
+  }
+
+  .upload-text-small {
+    font-size: 13px;
+    color: #475569;
+    display: block;
+    font-weight: 500;
+  }
+
+  .upload-hint-small {
+    font-size: 11px;
+    color: #0d9488;
+    display: block;
+    margin-top: 4px;
+  }
+
+  .files-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+
+  .file-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    transition: all 0.2s;
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+
+  .file-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #0d9488;
+  }
+
+  .file-preview {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .video-placeholder, .pdf-placeholder {
+    font-size: 28px;
+  }
+
+  .file-metadata {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 9px;
+    text-align: center;
+    padding: 2px;
+    font-weight: 500;
+  }
+
+  .file-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .file-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+
+  .file-size {
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+  }
+
+  .file-remove {
+    background: #fee2e2;
+    border: none;
+    color: #dc2626;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    opacity: 0;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .file-card:hover .file-remove {
+    opacity: 1;
+  }
+
+  .file-remove:hover {
+    background: #dc2626;
+    color: white;
+    transform: scale(1.1);
+  }
+
+  /* Scrollbar personnalisée */
+  .files-grid::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .files-grid::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+  }
+
+  .files-grid::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+
+  .files-grid::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 640px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>

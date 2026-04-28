@@ -1,0 +1,53 @@
+<div class="profile-card">
+  <div class="profile-header">
+    <div class="profile-avatar">
+      <i class="fas fa-user"></i>
+    </div>
+    <div class="profile-info">
+      <h4>{{ userName }}</h4>
+      <p>Patient ID: #{{ userId }}</p>
+    </div>
+    <button class="btn-icon">
+      <i class="fas fa-cog"></i>
+    </button>
+  </div>
+
+  <div class="profile-stats">
+    <div class="stat">
+      <i class="fas fa-calendar-check"></i>
+      <div>
+        <strong>{{ appointmentCount }}</strong>
+        <span>Rendez-vous</span>
+      </div>
+    </div>
+    <div class="stat">
+      <i class="fas fa-file-medical"></i>
+      <div>
+        <strong>8</strong>
+        <span>Dossiers</span>
+      </div>
+    </div>
+  </div>
+
+  <a href="#VOTRE_LIEN_ICI" class="btn-dossier-medical">
+    <i class="fas fa-folder-open"></i>
+    Voir mon dossier médical
+  </a>
+
+  <!-- ✅ BOUTON FILE D'ATTENTE — uniquement si RDV CONFIRMED aujourd'hui -->
+  <div *ngIf="confirmedAppointment">
+    <button class="btn-queue" type="button" (click)="toggleQueue()">
+      <i class="fas fa-users"></i>
+      {{ showQueue ? 'Masquer la file' : 'Rejoindre la file d\'attente' }}
+    </button>
+
+    <div *ngIf="showQueue">
+      <app-patient-queue-status
+        [idAppointment]="confirmedAppointment.idAppointment"
+        [medecinName]="confirmedAppointment.medecin"
+        [patientId]="currentPatientId">
+      </app-patient-queue-status>
+    </div>
+  </div>
+
+</div>

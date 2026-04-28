@@ -1,0 +1,26 @@
+<footer class="admin-footer">
+  <div class="admin-footer-inner">
+    <div class="footer-left">
+      <div class="footer-logo-mini">
+        <div class="mini-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7z" fill="white"/>
+          </svg>
+        </div>
+        <span class="text-stone-700 text-xs font-semibold">MediConnect Admin</span>
+      </div>
+      <span class="text-stone-500 text-xs">v{{ version }}</span>
+      <span class="footer-env-chip">
+        <span class="env-dot-sm"></span> Production
+      </span>
+    </div>
+    <nav class="footer-links">
+      <a *ngFor="let l of quickLinks" [routerLink]="l.path" class="footer-admin-link">
+        {{ l.label }}
+      </a>
+    </nav>
+    <p class="footer-copy">
+      &copy; {{ currentYear }} SkyLinkers TN — Usage restreint aux administrateurs
+    </p>
+  </div>
+</footer>

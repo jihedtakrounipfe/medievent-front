@@ -1,0 +1,93 @@
+.app-footer {
+  @apply bg-white border-t border-stone-200 mt-auto;
+}
+
+.footer-top {
+  @apply py-12 px-4 md:px-6;
+}
+
+.footer-container {
+  @apply max-w-screen-xl mx-auto;
+}
+
+.footer-container.grid-layout {
+  @apply grid grid-cols-1 md:grid-cols-5 gap-8;
+}
+
+.footer-brand {
+  @apply flex flex-col gap-4 md:col-span-2 max-w-xs;
+}
+
+.footer-brand > .footer-logo {
+  @apply flex items-center gap-2.5 no-underline;
+}
+
+.footer-logo-icon {
+  @apply w-9 h-9 bg-teal-600 rounded-lg flex items-center justify-center;
+}
+
+.footer-logo-text {
+  @apply text-xl font-bold;
+}
+
+.footer-tagline {
+  @apply text-stone-500 text-sm leading-relaxed;
+}
+
+.footer-badges {
+  @apply flex gap-2 flex-wrap;
+}
+
+.badge-hds {
+  @apply text-xs font-medium bg-teal-50 text-teal-700 px-2.5 py-1 rounded-full border border-teal-200;
+}
+
+.badge-rgpd {
+  @apply text-xs font-medium bg-stone-50 text-stone-600 px-2.5 py-1 rounded-full border border-stone-200;
+}
+
+.footer-emergency {
+  @apply text-xs text-stone-500 bg-red-50 border border-red-100 rounded-lg p-3;
+}
+
+/* Links grid - appears beside brand */
+.footer-links-grid {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-8 pt-8 md:pt-0 border-t md:border-t-0 border-stone-100;
+}
+
+/* Combined brand + links row */
+.footer-top .footer-container {
+  @apply flex flex-col md:flex-row gap-10;
+}
+
+.footer-col { @apply flex flex-col gap-3; }
+
+.footer-col-title {
+  @apply text-xs font-bold text-stone-400 uppercase tracking-widest;
+}
+
+.footer-link-list {
+  @apply flex flex-col gap-2 list-none p-0 m-0;
+}
+
+.footer-link {
+  @apply text-sm text-stone-500 hover:text-teal-600 transition-colors no-underline;
+}
+
+.footer-socials {
+  @apply flex items-center gap-2;
+}
+
+.social-icon {
+  @apply w-8 h-8 bg-stone-100 hover:bg-teal-100 hover:text-teal-600 text-stone-500
+         rounded-lg flex items-center justify-center transition-colors no-underline;
+}
+
+/* Bottom bar */
+.footer-bottom {
+  @apply border-t border-stone-100 py-4 px-4 md:px-6;
+}
+
+.footer-bottom-inner {
+  @apply flex flex-col md:flex-row items-center justify-between gap-2;
+}

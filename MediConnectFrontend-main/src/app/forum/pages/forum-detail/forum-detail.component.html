@@ -1,0 +1,470 @@
+<div class="page">
+
+  <!-- Barre de navigation -->
+  <div class="topbar">
+    <button class="back-btn" (click)="goBack()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+      Retour au forum
+    </button>
+    <span class="topbar-title">/ Discussion</span>
+  </div>
+
+  <!-- Layout principal -->
+  <div class="layout" *ngIf="!isLoading && post">
+
+    <!-- CARTE POST -->
+    <div class="post-card">
+      <div class="post-head">
+        <div class="top-row">
+          <div class="category-badge">
+            <span class="dot"></span>
+            {{ getCategoryIcon(post.category) }} {{ post.category }}
+          </div>
+          <div class="post-menu" *ngIf="canModifyPost()">
+            <button class="menu-btn" title="Modifier" (click)="editPost()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="menu-btn del" title="Supprimer" (click)="deletePost()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <h1 class="post-title">{{ post.title }}</h1>
+
+        <div class="author-row">
+          <div class="avatar" [class.patient]="post.author.role !== 'DOCTOR'" [class.doctor]="post.author.role === 'DOCTOR'">
+            {{ post.author.initials || 'U' }}
+          </div>
+          <div class="author-info">
+            <div class="name">{{ post.author.fullName || 'Utilisateur' }}</div>
+            <div class="meta"><span>{{ formatDate(post.createdAt) }}</span></div>
+          </div>
+          <div class="stats-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            {{ post.viewCount }} vues
+          </div>
+        </div>
+
+        <div class="tags" *ngIf="post.tags?.length">
+          <span *ngFor="let tag of post.tags" class="tag">#{{ tag }}</span>
+        </div>
+      </div>
+
+      <div class="post-body">
+        <p class="post-text">{{ post.content }}</p>
+
+        <div class="post-images" *ngIf="post.images?.length">
+          <div *ngFor="let img of post.images" class="image-item" (click)="openImageGallery(post, img)">
+            <img [src]="img" [alt]="post.title">
+          </div>
+        </div>
+
+        <div class="verified-banner" *ngIf="post.isVerifiedByDoctor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <span>Réponse vérifiée par un médecin certifié</span>
+        </div>
+      </div>
+
+      <div class="post-footer">
+        <button class="action-btn" [class.saved]="isSaved" (click)="toggleSave()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+          {{ isSaved ? 'Sauvegardé' : 'Sauvegarder' }}
+        </button>
+        <div class="reactions">
+          <span *ngFor="let emoji of reactionEmojis"
+            class="reaction"
+            [class.active]="userReaction === emoji"
+            (click)="toggleReaction(emoji)">
+            {{ emoji }}
+            <span class="reaction-count" *ngIf="getReactionCount(emoji) > 0">{{ getReactionCount(emoji) }}</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- ✅ BOUTONS IA -->
+      <div class="ai-tools">
+        <button class="ai-btn" (click)="analyzeSentiment()" title="Analyser le sentiment">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+            <line x1="9" y1="9" x2="9.01" y2="9"/>
+            <line x1="15" y1="9" x2="15.01" y2="9"/>
+          </svg>
+          Sentiment
+        </button>
+        <button class="ai-btn" (click)="generateSummary()" title="Résumé">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M4 4h16v16H4z"/>
+            <line x1="8" y1="8" x2="16" y2="8"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+            <line x1="8" y1="16" x2="12" y2="16"/>
+          </svg>
+          Résumé
+        </button>
+      </div>
+
+      <!-- Panel Résumé IA -->
+      <div *ngIf="showSummary && postSummary" class="ai-panel summary-panel">
+        <div class="ai-panel-header">
+          <h4>📋 Résumé IA</h4>
+          <button (click)="showSummary = false">✕</button>
+        </div>
+        <div class="ai-panel-body">
+          <p class="summary-text">{{ postSummary.summary }}</p>
+          <div class="key-points">
+            <strong>Points clés :</strong>
+            <ul>
+              <li *ngFor="let point of postSummary.keyPoints">{{ point }}</li>
+            </ul>
+          </div>
+          <small>Temps de lecture : {{ postSummary.readingTime }} min</small>
+        </div>
+      </div>
+
+      <!-- Panel Sentiment IA -->
+      <div *ngIf="showSentiment && currentSentiment" class="ai-panel sentiment-panel">
+        <div class="ai-panel-header">
+          <h4>🎭 Analyse de sentiment</h4>
+          <button (click)="showSentiment = false">✕</button>
+        </div>
+        <div class="ai-panel-body">
+          <div class="sentiment-result" [class]="currentSentiment.sentiment">
+            <span class="sentiment-icon">
+              {{ currentSentiment.sentiment === 'positif' ? '😊' : currentSentiment.sentiment === 'negatif' ? '😟' : '😐' }}
+            </span>
+            <span class="sentiment-label">{{ currentSentiment.sentiment | uppercase }}</span>
+          </div>
+          <div class="sentiment-score">
+            <div class="score-bar">
+              <div class="score-fill" [style.width.%]="currentSentiment.score * 100"></div>
+            </div>
+            <span>Score : {{ (currentSentiment.score * 100).toFixed(0) }}%</span>
+          </div>
+          <small>Confiance : {{ (currentSentiment.confidence * 100).toFixed(0) }}%</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR COMMENTAIRES -->
+    <div class="comments-card">
+      <div class="comments-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <h3>Commentaires</h3>
+        <span class="count-pill">{{ totalComments }}</span>
+      </div>
+
+      <div class="comment-insights">
+        <div class="insight-pill">{{ getReplyCount() }} réponses</div>
+        <div class="insight-pill">{{ getPinnedCommentsCount() }} épinglé(s)</div>
+        <div class="insight-pill">Tri: {{ getSortLabel() }}</div>
+        <button type="button" class="insight-action" (click)="improveComment()" [disabled]="!newComment.trim()">
+          ✨ Améliorer le commentaire
+        </button>
+      </div>
+
+      <div class="comment-sorter">
+        <button type="button" class="sort-chip" [class.active]="sortBy === 'ranked'" (click)="sortBy = 'ranked'">Pertinence</button>
+        <button type="button" class="sort-chip" [class.active]="sortBy === 'recent'" (click)="sortBy = 'recent'">Récents</button>
+        <button type="button" class="sort-chip" [class.active]="sortBy === 'threaded'" (click)="sortBy = 'threaded'">Arborescence</button>
+      </div>
+
+      <!-- Formulaire complet -->
+      <div class="comment-form">
+        <div class="mini-avatar">{{ post.author.initials || 'U' }}</div>
+        <div class="form-wrap">
+          
+          <!-- Bouton médicaments -->
+          <div class="drug-search-container">
+            <button type="button" class="drug-btn" (click)="showDrugSearch = !showDrugSearch">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                <circle cx="12" cy="12" r="4"/>
+              </svg>
+              💊 Médicaments
+            </button>
+          </div>
+
+          <!-- Panneau de recherche médicament -->
+          <div *ngIf="showDrugSearch" class="drug-search-panel">
+            <div class="drug-search-header">
+              <h4>Rechercher un médicament</h4>
+              <button (click)="closeDrugSearch()" class="close-btn">✕</button>
+            </div>
+            
+            <div class="drug-search-input">
+              <input 
+                type="text" 
+                [(ngModel)]="drugSearchQuery" 
+                placeholder="Nom du médicament (ex: Doliprane, Aspirine...)"
+                (keyup.enter)="searchDrug()">
+              <button (click)="searchDrug()" [disabled]="isSearchingDrug">
+                {{ isSearchingDrug ? '🔍...' : 'Rechercher' }}
+              </button>
+            </div>
+
+            <div *ngIf="drugSearchResults.length > 0" class="drug-results">
+              <div *ngFor="let drug of drugSearchResults" class="drug-result" (click)="selectDrug(drug)">
+                <div class="drug-name">{{ drug.name }}</div>
+                <div class="drug-info">
+                  <span class="drug-indication">{{ drug.indications[0] | slice:0:100 }}</span>
+                </div>
+                <div class="drug-manufacturer">{{ drug.manufacturer }}</div>
+              </div>
+            </div>
+
+            <div *ngIf="isSearchingDrug" class="drug-loading">
+              <div class="spinner-small"></div>
+              <span>Recherche en cours...</span>
+            </div>
+          </div>
+
+          <!-- Zone texte -->
+          <div class="input-wrapper">
+            <textarea 
+              rows="2" 
+              placeholder="Écrire un commentaire…"
+              [(ngModel)]="newComment"
+              (input)="validateCommentOnInput()"
+              (keydown.ctrl.enter)="submitComment()"
+              [class.error]="commentError">
+            </textarea>
+            
+            <!-- Microphone -->
+            <button 
+              type="button" 
+              class="mic-btn" 
+              [class.listening]="isListening"
+              (click)="toggleVoiceInput()"
+              title="Dicter un commentaire">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            
+            <!-- Envoyer -->
+            <button 
+              class="send-btn" 
+              (click)="submitComment()" 
+              [disabled]="!newComment.trim() || isSubmitting || commentError">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Compteur -->
+          <div class="char-counter" [class.error]="commentError">
+            <div class="counter-left">
+              <span [class.warning]="commentCharCount > commentMaxLength - 100">
+                📝 {{ commentCharCount }} / {{ commentMaxLength }}
+              </span>
+              <span *ngIf="commentCharCount > 0 && commentCharCount < commentMinLength" class="warning">
+                (minimum {{ commentMinLength }})
+              </span>
+            </div>
+            <div class="bad-words-warning" *ngIf="badWordsFound.length > 0">
+              ⚠️ {{ badWordsFound.length }} mot(s) inapproprié(s)
+            </div>
+          </div>
+          
+          <!-- Erreur -->
+          <div class="error-container" *ngIf="commentError">
+            <span class="error-icon">⚠️</span>
+            <span class="error-text">{{ commentError }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Liste commentaires -->
+      <div class="comments-list">
+        <div *ngIf="comments.length === 0 && !isLoadingComments" class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <p>Aucun commentaire pour l'instant</p>
+          <span>Soyez le premier à réagir</span>
+        </div>
+
+        <div *ngFor="let comment of getDisplayedComments()" class="comment">
+
+          <!-- Mode lecture -->
+          <ng-container *ngIf="editingCommentId !== comment.id">
+            <div class="c-head">
+              <div class="c-author">
+                <div class="avatar small"
+                  [class.patient]="comment.author.role !== 'DOCTOR'"
+                  [class.doctor]="comment.author.role === 'DOCTOR'">
+                  {{ comment.author.initials || 'U' }}
+                </div>
+                <div>
+                  <div class="c-name">
+                    {{ comment.author.fullName || 'Utilisateur' }}
+                    <span *ngIf="comment.author.role === 'DOCTOR'" class="badge-doctor">Médecin</span>
+                  </div>
+                  <div class="c-date">{{ formatDateOnly(comment.createdAt) }}</div>
+                </div>
+              </div>
+              <div class="c-actions">
+                <button class="c-action report" (click)="reportComment(comment)" title="Signaler">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 8v4m0 4h.01M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/>
+                  </svg>
+                </button>
+                <button *ngIf="canModifyComment(comment)" class="c-action" (click)="startEdit(comment)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button *ngIf="canModifyComment(comment)" class="c-action del" (click)="openDeleteCommentModal(comment)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="c-body">{{ comment.content }}</div>
+            <div *ngIf="comment.replyToId" class="reply-chip">Réponse à un commentaire</div>
+            <div class="c-footer">
+              <button class="vote-btn" [class.active]="comment.hasUserVoted" (click)="upvote(comment)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 4v16m8-8H4"/>
+                </svg>
+                {{ comment.upvotes || 0 }}
+              </button>
+            </div>
+          </ng-container>
+
+          <!-- Mode édition -->
+          <div *ngIf="editingCommentId === comment.id" class="comment-edit">
+            <textarea 
+              rows="3" 
+              [(ngModel)]="editingCommentContent" 
+              (input)="validateEditOnInput()"
+              placeholder="Modifier votre commentaire…"></textarea>
+            <div class="char-counter-small" *ngIf="editingCommentContent.length < commentMinLength && editingCommentContent.length > 0">
+              ⚠️ Minimum {{ commentMinLength }} caractères
+            </div>
+            <div class="edit-actions">
+              <button class="save-btn" (click)="saveEdit(comment)" [disabled]="!editingCommentContent.trim() || editingCommentContent.length < commentMinLength">
+                Enregistrer
+              </button>
+              <button class="cancel-btn" (click)="cancelEdit()">Annuler</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" *ngIf="totalPages > 1">
+        <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <span class="page-info">{{ getCurrentPageDisplay() }} / {{ totalPages }}</span>
+        <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= totalPages - 1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="loading">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- Erreur -->
+  <div *ngIf="errorMessage" class="error-message">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+    </svg>
+    {{ errorMessage }}
+  </div>
+</div>
+
+<!-- MODALES -->
+<div *ngIf="showDeleteConfirm" class="modal" (click)="cancelDelete()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+      </svg>
+    </div>
+    <h3>Supprimer la publication ?</h3>
+    <p>Cette action est irréversible.</p>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" (click)="cancelDelete()">Annuler</button>
+      <button class="modal-btn danger" (click)="confirmDelete()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showDeleteCommentModal" class="modal" (click)="closeDeleteCommentModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+      </svg>
+    </div>
+    <h3>Supprimer le commentaire ?</h3>
+    <p>Cette action est irréversible.</p>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" (click)="closeDeleteCommentModal()">Annuler</button>
+      <button class="modal-btn danger" (click)="confirmDeleteComment()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showCancelEditModal" class="modal" (click)="closeCancelEditModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-icon warning">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><path d="M12 9v4m0 4h.01"/>
+      </svg>
+    </div>
+    <h3>Modifications non sauvegardées</h3>
+    <p>Voulez-vous quitter sans enregistrer ?</p>
+    <div class="modal-buttons">
+      <button class="modal-btn danger" (click)="continueWithoutSaving()">Quitter</button>
+      <button class="modal-btn secondary" (click)="closeCancelEditModal()">Retour</button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showPinNotification" class="toast"
+  [class.toast-success]="pinNotificationType === 'success'"
+  [class.toast-error]="pinNotificationType === 'error'">
+  <span class="toast-icon">{{ pinNotificationType === 'success' ? '✓' : '✗' }}</span>
+  <span>{{ pinNotificationMessage }}</span>
+</div>

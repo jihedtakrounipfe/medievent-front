@@ -1,0 +1,86 @@
+<footer class="app-footer">
+
+  <!-- Top section -->
+  <div class="footer-top">
+    <div class="footer-container">
+
+      <!-- Brand column -->
+      <div class="footer-brand">
+        <a routerLink="/" class="footer-logo">
+          <div class="footer-logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="white" opacity=".3"/>
+              <path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7z" fill="white"/>
+            </svg>
+          </div>
+          <span class="footer-logo-text">
+            <span class="text-teal-600">Medi</span><span class="text-stone-800">Connect</span>
+          </span>
+        </a>
+        <p class="footer-tagline">La santé pour tous,<br/>accessible à tous.</p>
+        <div class="footer-badges">
+          <span class="badge-hds">&#127973; Certifié HDS</span>
+          <span class="badge-rgpd">&#128274; Conforme RGPD</span>
+        </div>
+        <p class="footer-emergency">
+          &#128680; <span class="font-semibold">Urgence médicale ?</span>
+          Appelez le <span class="text-red-600 font-bold">15</span> (SAMU)
+          ou le <span class="text-red-600 font-bold">112</span>
+        </p>
+      </div>
+
+      <!-- Links columns -->
+      <div class="footer-links-grid">
+        <div class="footer-col">
+          <h3 class="footer-col-title">Plateforme</h3>
+          <ul class="footer-link-list">
+            <li *ngFor="let link of footerLinks.platform">
+              <a [routerLink]="link.path" class="footer-link">{{ link.label }}</a>
+            </li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h3 class="footer-col-title">Mon espace</h3>
+          <ul class="footer-link-list">
+            <li *ngFor="let link of footerLinks.account">
+              <a [routerLink]="link.path" class="footer-link">{{ link.label }}</a>
+            </li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h3 class="footer-col-title">Légal</h3>
+          <ul class="footer-link-list">
+            <li *ngFor="let link of footerLinks.legal">
+              <a [routerLink]="link.path" class="footer-link">{{ link.label }}</a>
+            </li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h3 class="footer-col-title">Support</h3>
+          <ul class="footer-link-list">
+            <li *ngFor="let link of footerLinks.support">
+              <a [routerLink]="link.path" class="footer-link">{{ link.label }}</a>
+            </li>
+          </ul>
+          <div class="footer-socials mt-4">
+            <a *ngFor="let s of socials" [href]="s.url" [attr.aria-label]="s.name"
+               class="social-icon" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                <circle cx="12" cy="12" r="10"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="footer-bottom">
+    <div class="footer-container footer-bottom-inner">
+      <p class="text-stone-500 text-xs">© {{ currentYear }} MediConnect — SkyLinkers TN. Tous droits réservés.</p>
+      <p class="text-stone-500 text-xs">Made with &#129514; for better healthcare</p>
+    </div>
+  </div>
+
+</footer>

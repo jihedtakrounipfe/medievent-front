@@ -1,0 +1,109 @@
+<div class="min-h-full bg-gray-50 py-12">
+  <div class="mx-auto w-full max-w-6xl px-8">
+    <div class="mx-auto max-w-3xl text-center">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-teal-600">Choose your plan</p>
+      <h2 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">Subscription Plans</h2>
+      <p class="mt-4 text-base text-gray-600">Flexible options for every stage. Pick the plan that matches your goals and scale as you grow.</p>
+      @if (hasActiveSubscription) {
+        <p class="mx-auto mt-5 max-w-3xl rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm">
+          You have an active <span class="font-semibold text-gray-900">{{ activeSubscription?.planName }}</span> plan. Choose any other plan below and the backend will apply prorated credit from your current subscription before creating checkout.
+        </p>
+      }
+      @if (message) {
+        <p class="mx-auto mt-3 max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 shadow-sm">{{ message }}</p>
+      }
+      @if (error) {
+        <p class="mx-auto mt-3 max-w-3xl rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 shadow-sm">{{ error }}</p>
+      }
+      @if (loading) {
+        <div class="mx-auto mt-8 flex max-w-3xl items-center justify-center">
+          <div class="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-teal-600"></div>
+          <p class="ml-3 text-sm font-medium text-gray-600">Loading plans...</p>
+        </div>
+      }
+      <button (click)="startFullAudioTour()" 
+              class="mt-6 ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        🎧🚀 Start Audio Tour
+      </button>
+      <button (click)="describeThisPage()" 
+              class="mt-6 ml-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+        🎧 Describe This Page
+      </button>
+      @if ((audioTourService.isPlaying$ | async) || (audioTourService.isPaused$ | async)) {
+        <div class="mt-6 ml-4 flex gap-2">
+          <button (click)="audioTourService.pauseOrResume()"
+                  class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium">
+            {{ (audioTourService.isPaused$ | async) ? '▶ Resume' : '⏸ Pause' }}
+          </button>
+          <button (click)="audioTourService.stopTour()"
+                  class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium">
+            ⏹ Stop
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (user) {
+      <div class="mt-12 plans-grid justify-center gap-6" [ngClass]="user.userType === 'DOCTOR' ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'">
+        @for (plan of plans; track plan.id) {
+          <div class="h-full w-full max-w-md rounded-2xl bg-white shadow-lg transition-shadow hover:shadow-xl" [ngClass]="{
+              'ring-2 ring-teal-500': isRecommended(plan) || (plan.name || '').toUpperCase().includes('PREMIUM')
+            }">
+            <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100">
+              <div class="p-6 text-white" [class]="
+                  (plan.name || '').toUpperCase().includes('BASIC') ? 'bg-gradient-to-r from-blue-600 to-indigo-600' :
+                  (plan.name || '').toUpperCase().includes('PREMIUM') ? 'bg-gradient-to-r from-teal-600 to-cyan-600' :
+                  (plan.name || '').toUpperCase().includes('STUDENT') ? 'bg-gradient-to-r from-purple-600 to-violet-600' :
+                  (plan.name || '').toUpperCase().includes('GOLD') ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
+                  'bg-gradient-to-r from-gray-600 to-slate-500'
+                ">
+                <div class="flex items-start justify-between gap-3">
+                  <h3 class="text-2xl font-bold tracking-tight text-white">{{ plan.name }}</h3>
+                  @if ((plan.name || '').toUpperCase().includes('PREMIUM')) {
+                    <span class="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">Most Popular</span>
+                  }
+                </div>
+                <div class="mt-5">
+  <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/85">Monthly</p>
+  <p class="mt-2 text-5xl font-bold leading-none">{{ plan.priceMonthly }}</p>
+<p class="mt-1 text-sm font-medium text-white/90">TND / month</p>
+</div>
+              </div>
+
+              <div class="flex flex-1 flex-col p-6">
+                <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-800">
+                  <span>Monthly billing</span>
+                  <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">Save 20% on yearly</span>
+                </div>
+                <div class="mt-3 flex items-center justify-between rounded-xl bg-teal-50 px-4 py-2 text-sm font-medium text-teal-700">
+                  <span>Yearly total</span>
+                  <span class="font-bold text-teal-800">{{ plan.priceYearly }} TND</span>
+                </div>
+
+                <div class="my-5 border-t border-gray-200"></div>
+
+                <ul class="flex-1 space-y-3">
+                  @for (feature of plan.features; track feature) {
+                    <li class="flex items-start gap-3 text-sm font-medium leading-relaxed text-gray-600">
+                      <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-teal-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      <span class="select-none">{{ feature }}</span>
+                    </li>
+                  }
+                </ul>
+
+                <button class="mt-auto inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0" type="button" [disabled]="isCurrentPlan(plan) || isChangeInProgress(plan)" (click)="selectPlan(plan)">
+                  {{ isChangeInProgress(plan) ? 'Preparing change...' : getSelectButtonLabel(plan) }}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<app-plan-chat (planRecommended)="onPlanRecommended($event)" />
+

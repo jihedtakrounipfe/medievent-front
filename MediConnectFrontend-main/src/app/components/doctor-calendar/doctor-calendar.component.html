@@ -1,0 +1,344 @@
+<!-- Topbar retour -->
+<div class="cal-topbar">
+  <button class="cal-close-btn" (click)="goBack()">
+    <i class="fas fa-arrow-left"></i> Retour aux rendez-vous
+  </button>
+  <span class="cal-topbar-title">
+    <i class="fas fa-calendar-week"></i> Planning de {{ medecinNom }}
+  </span>
+</div>
+
+<!-- Notifications -->
+<div class="notif-stack">
+  <div *ngFor="let n of notifications; let i = index" class="notif-pill">
+    <span>{{ n }}</span>
+    <button (click)="dismissNotification(i)"><i class="fas fa-times"></i></button>
+  </div>
+</div>
+
+<div class="cal-shell">
+
+  <!-- Sidebar -->
+  <aside class="cal-aside">
+    <div class="aside-profile">
+      <div class="aside-avatar"><i class="fas fa-user-md"></i></div>
+      <div>
+        <p class="aside-name">{{ medecinNom }}</p>
+        <p class="aside-sub">Planning médical</p>
+      </div>
+    </div>
+
+    <div class="mini-stats">
+      <div class="mini-stat">
+        <span class="ms-val">{{ getTodayRdvCount() }}</span>
+        <span class="ms-lbl">Aujourd'hui</span>
+      </div>
+      <div class="mini-stat">
+        <span class="ms-val">{{ getMonthRdvCount() }}</span>
+        <span class="ms-lbl">Ce mois</span>
+      </div>
+      <div class="mini-stat">
+        <span class="ms-val">{{ reminders.length }}</span>
+        <span class="ms-lbl">Rappels</span>
+      </div>
+    </div>
+
+    <!-- Prochains RDV -->
+    <div class="aside-section">
+      <p class="aside-title"><i class="fas fa-clock"></i> Prochains RDV</p>
+      <div *ngIf="getUpcomingRdvs().length === 0" class="aside-empty">Aucun RDV à venir</div>
+      <div *ngFor="let rdv of getUpcomingRdvs()" class="upcoming-item" (click)="openRdv(rdv, $event)">
+        <div class="upcoming-dot" [style.background]="getRdvColor(rdv.status)"></div>
+        <div>
+          <p class="upcoming-name">{{ rdv.motif || 'Consultation' }}</p>
+          <p class="upcoming-meta"><i class="fas fa-calendar-day"></i> {{ rdv.date }} &nbsp;·&nbsp; {{ rdv.heure?.substring(0,5) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rappels -->
+    <div class="aside-section">
+      <div class="aside-title-row">
+        <p class="aside-title"><i class="fas fa-bell"></i> Rappels</p>
+        <button class="btn-add-rem" (click)="openNewReminder()">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+      <div *ngIf="reminders.length === 0" class="aside-empty">Aucun rappel</div>
+      <div *ngFor="let rem of reminders" class="rem-item">
+        <div class="rem-color" [style.background]="rem.color"></div>
+        <div class="rem-body">
+          <p class="rem-title">{{ rem.title }}</p>
+          <p class="rem-meta">{{ rem.date }} · {{ rem.time }}</p>
+        </div>
+        <div class="rem-actions">
+          <button (click)="openEditReminder(rem, $event)"><i class="fas fa-edit"></i></button>
+          <button (click)="deleteReminder(rem.id, $event)"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="cal-main">
+
+    <!-- Toolbar -->
+    <div class="cal-toolbar">
+      <div class="toolbar-left">
+        <button class="tb-btn today-btn" (click)="goToToday()">Aujourd'hui</button>
+        <button class="tb-icon" (click)="prevMonth()"><i class="fas fa-chevron-left"></i></button>
+        <button class="tb-icon" (click)="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+        <h2 class="cal-title">{{ getMonthLabel() }}</h2>
+      </div>
+     <div class="toolbar-right">
+  <button class="tb-btn ai-btn" (click)="toggleAiPanel()">
+    <i class="fas fa-robot"></i> Assistant IA
+  </button>
+  <button class="tb-btn add-rem-btn" (click)="openNewReminder()">
+    <i class="fas fa-bell"></i> Nouveau rappel
+  </button>
+</div>
+    </div>
+
+    <!-- Weekdays -->
+    <div class="cal-weekdays">
+      <div *ngFor="let d of weekDays" class="cal-wd">{{ d }}</div>
+    </div>
+
+    <!-- Grille -->
+    <div class="cal-grid">
+      <div *ngFor="let day of calendarDays"
+           class="cal-cell"
+           [class.empty]="!day"
+           [class.today]="day?.isToday"
+           [class.past]="day?.isPast"
+           [class.selected]="selectedDay?.dateStr === day?.dateStr"
+           (click)="selectDay(day)">
+
+        <ng-container *ngIf="day">
+          <div class="cell-header">
+            <span class="cell-day">{{ day.day }}</span>
+            <button *ngIf="!day.isPast"
+                    class="cell-add"
+                    (click)="openNewReminder(day.dateStr); $event.stopPropagation()">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+
+          <div *ngFor="let rdv of day.rdvs.slice(0,2)"
+               class="cell-event rdv-event"
+               [style.background]="getRdvColor(rdv.status) + '18'"
+               [style.borderLeft]="'3px solid ' + getRdvColor(rdv.status)"
+               [style.color]="getRdvColor(rdv.status)"
+               (click)="openRdv(rdv, $event)"
+               [title]="rdv.motif">
+            <i class="fas fa-stethoscope"></i>
+            {{ rdv.heure?.substring(0,5) }} {{ rdv.motif?.substring(0,10) }}
+          </div>
+
+          <div *ngFor="let rem of day.reminders.slice(0,1)"
+               class="cell-event rem-event"
+               [style.background]="rem.color + '18'"
+               [style.borderLeft]="'3px solid ' + rem.color"
+               [style.color]="rem.color"
+               (click)="openEditReminder(rem, $event)"
+               [title]="rem.title">
+            <i class="fas fa-bell"></i>
+            {{ rem.time }} {{ rem.title?.substring(0,10) }}
+          </div>
+
+          <div *ngIf="day.rdvs.length + day.reminders.length > 3" class="cell-more">
+            +{{ day.rdvs.length + day.reminders.length - 3 }} autres
+          </div>
+        </ng-container>
+      </div>
+    </div>
+
+    <!-- Détail jour sélectionné -->
+    <div class="day-detail" *ngIf="selectedDay">
+      <div class="dd-header">
+        <h3><i class="fas fa-calendar-day"></i> {{ selectedDay.dateStr }}</h3>
+        <button class="tb-btn add-rem-btn" (click)="openNewReminder(selectedDay.dateStr)">
+          <i class="fas fa-plus"></i> Ajouter rappel
+        </button>
+      </div>
+
+      <div class="dd-body">
+        <div *ngIf="selectedDay.rdvs.length > 0">
+          <p class="dd-section-title"><i class="fas fa-stethoscope"></i> Rendez-vous</p>
+          <div *ngFor="let rdv of selectedDay.rdvs" class="dd-item" (click)="openRdv(rdv, $event)">
+            <div class="dd-color" [style.background]="getRdvColor(rdv.status)"></div>
+            <div class="dd-content">
+              <p class="dd-name">{{ rdv.motif || 'Consultation' }}</p>
+              <p class="dd-meta">
+                <span><i class="fas fa-clock"></i> {{ rdv.heure?.substring(0,5) }}</span>
+                <span class="dd-badge" [style.background]="getRdvColor(rdv.status)">
+                  {{ getRdvLabel(rdv.status) }}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="selectedDay.reminders.length > 0">
+          <p class="dd-section-title"><i class="fas fa-bell"></i> Rappels</p>
+          <div *ngFor="let rem of selectedDay.reminders" class="dd-item">
+            <div class="dd-color" [style.background]="rem.color"></div>
+            <div class="dd-content">
+              <p class="dd-name">{{ rem.title }}</p>
+              <p class="dd-meta">
+                <span><i class="fas fa-clock"></i> {{ rem.time }}</span>
+                <span *ngIf="rem.note" class="dd-note">{{ rem.note }}</span>
+              </p>
+            </div>
+            <div class="dd-item-actions">
+              <button (click)="openEditReminder(rem, $event)"><i class="fas fa-edit"></i></button>
+              <button (click)="deleteReminder(rem.id, $event)"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="selectedDay.rdvs.length === 0 && selectedDay.reminders.length === 0" class="dd-empty">
+          <i class="fas fa-calendar-check"></i>
+          <p>Journée libre</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+  <!-- Panel Assistant IA -->
+<div class="ai-panel" [class.open]="showAiPanel">
+  <div class="ai-header">
+    <div class="ai-header-left">
+      <div class="ai-avatar"><i class="fas fa-robot"></i></div>
+      <div>
+        <p class="ai-title">Assistant IA</p>
+        <p class="ai-sub">Propulsé par Claude</p>
+      </div>
+    </div>
+    <button class="ai-close" (click)="showAiPanel = false">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <div class="ai-messages">
+    <div *ngFor="let msg of aiMessages"
+         class="ai-msg"
+         [class.user]="msg.role === 'user'"
+         [class.assistant]="msg.role === 'assistant'">
+      <div class="ai-msg-avatar" *ngIf="msg.role === 'assistant'">
+        <i class="fas fa-robot"></i>
+      </div>
+      <div class="ai-msg-bubble">{{ msg.content }}</div>
+      <div class="ai-msg-avatar user-av" *ngIf="msg.role === 'user'">
+        <i class="fas fa-user-md"></i>
+      </div>
+    </div>
+    <div class="ai-typing" *ngIf="aiLoading">
+      <div class="ai-msg-avatar"><i class="fas fa-robot"></i></div>
+      <div class="ai-typing-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ai-input-row">
+    <textarea
+      class="ai-input"
+      [(ngModel)]="aiInput"
+      (keydown)="onAiKeydown($event)"
+      placeholder="Ex: Crée un rappel réunion demain à 9h..."
+      rows="2">
+    </textarea>
+    <button class="ai-send" (click)="sendAiMessage()" [disabled]="aiLoading">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+</div>
+</div>
+
+<!-- Modal Reminder -->
+<div class="modal-overlay" *ngIf="showReminderModal" (click)="showReminderModal = false">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-card-header">
+      <h3><i class="fas fa-bell"></i> {{ editingReminder ? 'Modifier' : 'Nouveau' }} rappel</h3>
+      <button class="close-btn" (click)="showReminderModal = false"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-card-body">
+      <div class="field-group">
+        <label>Titre *</label>
+        <input [(ngModel)]="newReminder.title" placeholder="Ex: Réunion équipe médicale" class="field-input"/>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Date *</label>
+          <input type="date" [(ngModel)]="newReminder.date" class="field-input"/>
+        </div>
+        <div class="field-group">
+          <label>Heure</label>
+          <input type="time" [(ngModel)]="newReminder.time" class="field-input"/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Note</label>
+        <textarea [(ngModel)]="newReminder.note" placeholder="Note optionnelle..." class="field-input" rows="2"></textarea>
+      </div>
+      <div class="field-group">
+        <label>Couleur</label>
+        <div class="color-picker">
+          <div *ngFor="let c of reminderColors"
+               class="color-dot"
+               [style.background]="c"
+               [class.selected]="newReminder.color === c"
+               (click)="newReminder.color = c">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-card-footer">
+      <button class="btn-cancel-modal" (click)="showReminderModal = false">Annuler</button>
+      <button class="btn-save-modal" (click)="saveReminder()">
+        <i class="fas fa-check"></i> {{ editingReminder ? 'Modifier' : 'Ajouter' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal RDV Detail -->
+<div class="modal-overlay" *ngIf="showRdvModal" (click)="closeRdvModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-card-header" [style.borderBottom]="'3px solid ' + getRdvColor(selectedRdv?.status)">
+      <h3><i class="fas fa-stethoscope"></i> Détail du rendez-vous</h3>
+      <button class="close-btn" (click)="closeRdvModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-card-body" *ngIf="selectedRdv">
+      <div class="rdv-detail-badge"
+           [style.background]="getRdvColor(selectedRdv.status) + '18'"
+           [style.color]="getRdvColor(selectedRdv.status)">
+        <i class="fas fa-circle" style="font-size:0.5rem; margin-right:6px"></i>
+        {{ getRdvLabel(selectedRdv.status) }}
+      </div>
+      <div class="rdv-detail-grid">
+        <div class="rdv-detail-item">
+          <i class="fas fa-calendar"></i>
+          <div><span>Date</span><strong>{{ selectedRdv.date }}</strong></div>
+        </div>
+        <div class="rdv-detail-item">
+          <i class="fas fa-clock"></i>
+          <div><span>Heure</span><strong>{{ selectedRdv.heure?.substring(0,5) }}</strong></div>
+        </div>
+        <div class="rdv-detail-item">
+          <i class="fas fa-stethoscope"></i>
+          <div><span>Spécialité</span><strong>{{ selectedRdv.specialite || 'N/A' }}</strong></div>
+        </div>
+        <div class="rdv-detail-item">
+          <i class="fas fa-comment-medical"></i>
+          <div><span>Motif</span><strong>{{ selectedRdv.motif || 'N/A' }}</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-card-footer">
+      <button class="btn-cancel-modal" (click)="closeRdvModal()">Fermer</button>
+    </div>
+  </div>
+</div>

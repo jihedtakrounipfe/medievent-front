@@ -1,0 +1,336 @@
+<!-- ===== TOASTS ===== -->
+<div class="toast-notification success" *ngIf="showSuccessMessage">
+  <div class="toast-icon"><i class="fas fa-check-circle"></i></div>
+  <div class="toast-content">
+    <strong>Rendez-vous pris  !</strong>
+    <p>{{ messageText }}</p>
+  </div>
+  <button class="toast-close" (click)="showSuccessMessage = false">
+    <i class="fas fa-times"></i>
+  </button>
+  <div class="toast-progress"></div>
+</div>
+
+<div class="toast-notification error" *ngIf="showErrorMessage">
+  <div class="toast-icon"><i class="fas fa-exclamation-circle"></i></div>
+  <div class="toast-content">
+    <strong>Une erreur est survenue</strong>
+    <p>{{ messageText }}</p>
+  </div>
+  <button class="toast-close" (click)="showErrorMessage = false">
+    <i class="fas fa-times"></i>
+  </button>
+  <div class="toast-progress"></div>
+</div>
+<!-- ===== FIN TOASTS ===== -->
+
+<div class="appointment-booking">
+  <div class="booking-card">
+    <div class="card-header">
+      <i class="fas fa-calendar-plus"></i>
+      <h3>Réserver un Rendez-vous</h3>
+    </div>
+
+    <form class="booking-form" (ngSubmit)="submit()">
+
+      <!-- Choix Médecin ou Laboratoire -->
+      <div class="form-group">
+        <label><i class="fas fa-user-md"></i> Type de rendez-vous <span class="required-star">*</span></label>
+        <select class="form-control"
+                [class.input-error]="touched.typeRdv && !typeRdv"
+                [class.input-valid]="touched.typeRdv && typeRdv"
+                [(ngModel)]="typeRdv"
+                name="typeRdv"
+                (change)="medecin = ''; date = ''; heure = ''; touched.typeRdv = true">
+          <option value="">-- Sélectionnez un type --</option>
+          <option value="medecin">Médecin</option>
+          <option value="laboratoire">Laboratoire</option>
+        </select>
+        <div class="error-message" *ngIf="touched.typeRdv && !typeRdv">
+          <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner un type de rendez-vous
+        </div>
+      </div>
+
+      <!-- ===== MÉDECIN ===== -->
+      <div *ngIf="typeRdv === 'medecin'">
+
+        <!-- Spécialité -->
+        <div class="form-group">
+          <label><i class="fas fa-stethoscope"></i> Spécialité <span class="required-star">*</span></label>
+          <select class="form-control"
+                  [class.input-error]="touched.specialite && !specialite"
+                  [class.input-valid]="touched.specialite && specialite"
+                  [(ngModel)]="specialite"
+                  name="specialite"
+                  (blur)="touched.specialite = true"
+                  (change)="onSpecialiteChange(); touched.specialite = true">
+            <option value="">-- Sélectionnez une spécialité --</option>
+            <option *ngFor="let s of specialites" [value]="s">{{s}}</option>
+          </select>
+          <div class="error-message" *ngIf="touched.specialite && !specialite">
+            <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner une spécialité
+          </div>
+        </div>
+
+        <!-- Médecin -->
+        <div class="form-group">
+          <label><i class="fas fa-user-md"></i> Médecin <span class="required-star">*</span></label>
+          <select class="form-control"
+                  [class.input-error]="touched.medecin && !medecin"
+                  [class.input-valid]="touched.medecin && medecin"
+                  [(ngModel)]="medecin"
+                  name="medecin"
+                  [disabled]="!specialite || medecinLoading"
+                  (blur)="touched.medecin = true"
+                  (change)="onDoctorChange(); touched.medecin = true">
+            <option value="">
+              {{ !specialite ? '-- Choisissez d\'abord une spécialité --'
+               : medecinLoading ? 'Chargement...'
+               : '-- Sélectionnez un médecin --' }}
+            </option>
+            <option *ngFor="let m of medecins"
+                    [value]="'Dr. ' + m.firstName + ' ' + m.lastName">
+              Dr. {{ m.firstName }} {{ m.lastName }}
+              <span *ngIf="m.consultationFee"> — {{ m.consultationFee }} TND</span>
+            </option>
+          </select>
+          <div class="error-message"
+               *ngIf="specialite && !medecinLoading && medecins.length === 0">
+            <i class="fas fa-exclamation-circle"></i>
+            Aucun médecin disponible pour cette spécialité
+          </div>
+          <div class="error-message" *ngIf="touched.medecin && !medecin">
+            <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner un médecin
+          </div>
+        </div>
+
+      </div>
+      <!-- ===== FIN MÉDECIN ===== -->
+
+      <!-- ===== LABORATOIRE ===== -->
+      <div *ngIf="typeRdv === 'laboratoire'">
+        <div class="form-group">
+          <label><i class="fas fa-flask"></i> Laboratoire <span class="required-star">*</span></label>
+          <select class="form-control"
+                  [class.input-error]="touched.laboratoire && !laboratoire"
+                  [class.input-valid]="touched.laboratoire && laboratoire"
+                  [(ngModel)]="laboratoire"
+                  name="laboratoire"
+                  (blur)="touched.laboratoire = true"
+                  (change)="date = ''; heure = ''; touched.laboratoire = true">
+            <option value="">-- Sélectionnez un laboratoire --</option>
+            <option *ngFor="let l of laboratoires" [value]="l">{{l}}</option>
+          </select>
+          <div class="error-message" *ngIf="touched.laboratoire && !laboratoire">
+            <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner un laboratoire
+          </div>
+        </div>
+      </div>
+      <!-- ===== FIN LABORATOIRE ===== -->
+
+      <!-- ========== CALENDRIER DES DISPONIBILITÉS ========== -->
+      <div *ngIf="typeRdv === 'medecin' && medecin" class="calendar-section">
+
+        <div class="calendar-header-nav">
+          <h4><i class="fas fa-calendar-alt"></i> Disponibilités du {{medecin}}</h4>
+          <div class="nav-buttons">
+            <button type="button" class="nav-btn" (click)="previousWeek()" [disabled]="currentWeekOffset <= 0">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="week-range">{{getWeekRange()}}</span>
+            <button type="button" class="nav-btn" (click)="nextWeek()">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="calendar-container">
+          <div class="calendar-header">
+            <div class="corner-cell"></div>
+            <div class="day-cell" *ngFor="let day of nextDays"
+                 [class.today]="isToday(day)"
+                 [class.sunday]="isSunday(day)"
+                 [class.passed]="isDatePassed(day) && !isSunday(day)">
+              <div class="day-name">{{getDayName(day)}}</div>
+              <div class="day-date">{{formatDate(day)}}</div>
+              <div class="day-status" *ngIf="isSunday(day)">Fermé</div>
+            </div>
+          </div>
+
+          <div class="calendar-body">
+            <div class="time-row" *ngFor="let slot of timeSlots">
+              <div class="time-cell">{{slot}}</div>
+              <div class="slot-cell"
+                   *ngFor="let day of nextDays"
+                   [class.available]="!isSunday(day) && !isDatePassed(day) && isTimeSlotAvailable(day, slot)"
+                   [class.unavailable]="!isSunday(day) && !isDatePassed(day) && !isTimeSlotAvailable(day, slot)"
+                   [class.sunday]="isSunday(day)"
+                   [class.passed]="isDatePassed(day) && !isSunday(day)"
+                   [class.selected]="!isSunday(day) && date === formatDateForCompare(day) && heure === slot"
+                   (click)="!isSunday(day) && !isDatePassed(day) && isTimeSlotAvailable(day, slot) && selectSlot(day, slot); touched.date = true">
+                <ng-container *ngIf="!isSunday(day) && !isDatePassed(day)">
+                  <span *ngIf="isTimeSlotAvailable(day, slot)" class="available-indicator">✓</span>
+                  <span *ngIf="!isTimeSlotAvailable(day, slot)" class="unavailable-indicator">✗</span>
+                </ng-container>
+                <span *ngIf="isSunday(day)" class="closed-indicator">—</span>
+                <span *ngIf="isDatePassed(day) && !isSunday(day)" class="passed-indicator">•</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Légende -->
+        <div class="legend">
+          <div class="legend-item"><span class="available-box"></span><span>Disponible</span></div>
+          <div class="legend-item"><span class="unavailable-box"></span><span>Occupé</span></div>
+          <div class="legend-item"><span class="sunday-box"></span><span>Fermé (Dimanche)</span></div>
+          <div class="legend-item"><span class="passed-box"></span><span>Date passée</span></div>
+          <div class="legend-item"><span class="selected-box"></span><span>Sélectionné</span></div>
+        </div>
+
+        <!-- Créneau sélectionné -->
+        <div *ngIf="date && heure" class="selected-slot">
+          <i class="fas fa-check-circle"></i>
+          <span>Vous avez sélectionné : {{date | date:'dd/MM/yyyy'}} à {{heure}}</span>
+          <button type="button" class="btn-change" (click)="clearSelection()">
+            <i class="fas fa-times"></i> Changer
+          </button>
+        </div>
+
+        <!-- Erreur créneau non sélectionné -->
+        <div class="error-message mt-8" *ngIf="touched.date && (!date || !heure)">
+          <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner un créneau disponible
+        </div>
+
+        <div *ngIf="!hasAvailableSlots()" class="no-slots-message">
+          <i class="fas fa-exclamation-circle"></i>
+          <p>Aucun créneau disponible pour cette période</p>
+        </div>
+
+      </div>
+      <!-- ========== FIN CALENDRIER ========== -->
+
+      <!-- ========== DATE & HEURE LABORATOIRE ========== -->
+      <div class="form-row" *ngIf="typeRdv !== 'medecin' || !medecin">
+        <div class="form-group">
+          <label><i class="fas fa-calendar"></i> Date <span class="required-star">*</span></label>
+          <input type="date" class="form-control"
+                 [class.input-error]="touched.date && (!date || isDateIndisponible(date))"
+                 [class.input-valid]="touched.date && date && !isDateIndisponible(date)"
+                 [(ngModel)]="date"
+                 name="date"
+                 [min]="todayDate"
+                 (blur)="touched.date = true"
+                 (change)="heure = ''; touched.date = true">
+          <div class="error-message" *ngIf="touched.date && !date">
+            <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner une date
+          </div>
+          <div class="error-message" *ngIf="touched.date && date && isDateIndisponible(date)">
+            <i class="fas fa-exclamation-circle"></i> {{ getMotifFermeture(date) }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-clock"></i> Heure <span class="required-star">*</span></label>
+          <select class="form-control" *ngIf="!date || isDateIndisponible(date)" disabled>
+            <option>-- Sélectionnez d'abord une date valide --</option>
+          </select>
+          <select class="form-control"
+                  *ngIf="date && !isDateIndisponible(date)"
+                  [class.input-error]="touched.heure && !heure"
+                  [class.input-valid]="touched.heure && heure"
+                  [(ngModel)]="heure"
+                  name="heure"
+                  (blur)="touched.heure = true"
+                  (change)="touched.heure = true">
+            <option value="">-- Sélectionnez un créneau --</option>
+            <option *ngFor="let c of tousLesCreneauxLabo"
+                    [value]="c"
+                    [disabled]="isHeurePriseLabo(c)">
+              {{ c }} {{ isHeurePriseLabo(c) ? '— Occupé' : '— Disponible' }}
+            </option>
+          </select>
+          <div class="error-message"
+               *ngIf="date && !isDateIndisponible(date) && creneauxDisponiblesLabo.length === 0">
+            <i class="fas fa-exclamation-circle"></i> Aucun créneau disponible pour cette date
+          </div>
+          <div class="error-message" *ngIf="touched.heure && !heure && date && !isDateIndisponible(date)">
+            <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner un créneau
+          </div>
+        </div>
+      </div>
+      <!-- ========== FIN DATE & HEURE LABORATOIRE ========== -->
+
+      <!-- ========== MOTIFS ========== -->
+      <div *ngIf="typeRdv === 'medecin' && specialite">
+        <div class="form-group">
+          <label><i class="fas fa-heartbeat"></i> Symptôme principal <span class="required-star">*</span></label>
+          <select class="form-control" [(ngModel)]="symptome" name="symptome">
+            <option value="">-- Sélectionnez votre symptôme --</option>
+            <option *ngFor="let s of symptomesDuMedecin" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-notes-medical"></i> Précisions supplémentaires</label>
+          <textarea class="form-control" rows="3"
+                    placeholder="Depuis quand ? Intensité ? Autres détails..."
+                    [(ngModel)]="motif" name="motif"></textarea>
+        </div>
+      </div>
+
+      <div *ngIf="typeRdv === 'medecin' && !specialite">
+        <div class="form-group">
+          <label><i class="fas fa-notes-medical"></i> Motif de consultation</label>
+          <textarea class="form-control" rows="3"
+                    placeholder="Décrivez brièvement votre motif..."
+                    [(ngModel)]="motif" name="motif"></textarea>
+        </div>
+      </div>
+
+      <div *ngIf="typeRdv === 'laboratoire' && laboratoire">
+        <div class="form-group">
+          <label><i class="fas fa-flask"></i> Type d'analyse <span class="required-star">*</span></label>
+          <select class="form-control"
+                  [class.input-error]="touched.typeAnalyse && !typeAnalyse"
+                  [class.input-valid]="touched.typeAnalyse && typeAnalyse"
+                  [(ngModel)]="typeAnalyse" name="typeAnalyse"
+                  (blur)="touched.typeAnalyse = true"
+                  (change)="touched.typeAnalyse = true">
+            <option value="">-- Sélectionnez le type d'analyse --</option>
+            <option *ngFor="let a of analysesLabo" [value]="a">{{ a }}</option>
+          </select>
+          <div class="error-message" *ngIf="touched.typeAnalyse && !typeAnalyse">
+            <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner un type d'analyse
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-notes-medical"></i> Précisions / Ordonnance</label>
+          <textarea class="form-control" rows="3"
+                    placeholder="Numéro d'ordonnance, médecin prescripteur, remarques..."
+                    [(ngModel)]="motif" name="motif"></textarea>
+        </div>
+      </div>
+
+      <div *ngIf="typeRdv === 'laboratoire' && !laboratoire">
+        <div class="form-group">
+          <label><i class="fas fa-notes-medical"></i> Motif de consultation</label>
+          <textarea class="form-control" rows="3"
+                    placeholder="Décrivez brièvement votre motif..."
+                    [(ngModel)]="motif" name="motif"></textarea>
+        </div>
+      </div>
+      <!-- ========== FIN MOTIFS ========== -->
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="!isFormValid()">
+        <i class="fas fa-check-circle"></i> Confirmer le Rendez-vous
+      </button>
+
+    </form>
+  </div>
+  <!-- ===== FIN booking-card ===== -->
+
+ 
+
+     
+
+</div>
+<!-- ===== FIN appointment-booking ===== -->

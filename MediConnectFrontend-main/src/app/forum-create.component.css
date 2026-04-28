@@ -1,0 +1,27 @@
+﻿/* Styles pour le formulaire de création */
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.form-section {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

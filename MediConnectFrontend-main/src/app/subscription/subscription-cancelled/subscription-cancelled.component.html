@@ -1,0 +1,80 @@
+<div class="min-h-full bg-gray-50 py-12">
+  <div class="mx-auto w-full max-w-2xl px-8 text-center">
+    <div class="overflow-hidden rounded-[3.5rem] bg-white p-12 shadow-2xl ring-1 ring-gray-900/5">
+       <!-- Icon -->
+       <div class="mx-auto mb-10 flex h-28 w-28 items-center justify-center rounded-full bg-rose-50 text-rose-600 ring-8 ring-rose-50/50">
+         <svg class="h-14 w-14 animate-in zoom-in duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m7 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+       </div>
+
+       <h1 class="text-4xl font-black tracking-tight text-gray-900">Subscription Cancelled</h1>
+       <p class="mt-4 text-base font-medium text-gray-500 leading-relaxed">
+         Your cancellation request has been processed successfully.
+       </p>
+
+       @if (cancelledSubscription) {
+         <div class="mt-10 grid gap-4 text-left">
+           <div class="flex items-center justify-between rounded-2xl bg-gray-50 p-5 ring-1 ring-gray-100">
+             <span class="text-xs font-black uppercase tracking-widest text-gray-400">Cancelled Plan</span>
+             <span class="text-sm font-bold text-gray-900">{{ cancelledSubscription.planName }}</span>
+           </div>
+           <div class="flex items-center justify-between rounded-2xl bg-gray-50 p-5 ring-1 ring-gray-100">
+             <span class="text-xs font-black uppercase tracking-widest text-gray-400">Access Until</span>
+             <span class="text-sm font-bold text-gray-900">{{ cancelledSubscription.endDate }}</span>
+           </div>
+           @if (userCredit && userCredit.balance > 0) {
+             <div class="flex items-center justify-between rounded-2xl bg-emerald-50 p-5 ring-1 ring-emerald-100">
+               <span class="text-xs font-black uppercase tracking-widest text-emerald-600">Credit Balance</span>
+               <span class="text-sm font-black text-emerald-700">{{ userCredit.balance | number: '1.2-2' }} TND</span>
+             </div>
+           }
+         </div>
+       }
+
+       <div class="mt-12 space-y-8 text-left">
+         <h3 class="text-xs font-black uppercase tracking-[0.2em] text-gray-400 text-center">What happens now?</h3>
+         <div class="space-y-6">
+           <div class="flex gap-5">
+             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[10px] font-black text-white">1</div>
+             <div>
+               <p class="text-sm font-bold text-gray-900">Keep Your Access</p>
+               <p class="mt-1 text-xs text-gray-500 leading-relaxed">You can continue using all features of your current plan until {{ cancelledSubscription?.endDate }}.</p>
+             </div>
+           </div>
+           <div class="flex gap-5">
+             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[10px] font-black text-white">2</div>
+             <div>
+               <p class="text-sm font-bold text-gray-900">Resubscribe Anytime</p>
+               <p class="mt-1 text-xs text-gray-500 leading-relaxed">Your data and medical history are safe. You can pick a new plan whenever you're ready.</p>
+             </div>
+           </div>
+           @if (userCredit && userCredit.balance > 0) {
+             <div class="flex gap-5">
+               <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-black text-white">3</div>
+               <div>
+                 <p class="text-sm font-bold text-gray-900">Credit Auto-Applied</p>
+                 <p class="mt-1 text-xs text-gray-500 leading-relaxed">When you resubscribe, your current balance will be deducted from the total automatically.</p>
+               </div>
+             </div>
+           }
+         </div>
+       </div>
+
+       <div class="mt-12 flex flex-col gap-3">
+         <button (click)="browsePlans()" class="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-gray-900 py-5 text-sm font-black text-white shadow-xl transition hover:bg-gray-800 hover:-translate-y-0.5">
+           Browse New Plans
+           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+         </button>
+         <button (click)="viewDashboard()" class="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-5 text-sm font-bold text-gray-600 transition hover:bg-gray-50">
+           Account Dashboard
+         </button>
+       </div>
+    </div>
+    
+    <div class="mt-12 flex items-center justify-center gap-2">
+      <div class="h-px w-8 bg-gray-200"></div>
+      <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">MediConnect Support</p>
+      <div class="h-px w-8 bg-gray-200"></div>
+    </div>
+  </div>
+</div>
+

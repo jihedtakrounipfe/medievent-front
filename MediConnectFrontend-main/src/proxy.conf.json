@@ -1,0 +1,25 @@
+{
+  "/api/forum": {
+    "target": "http://localhost:8080",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/uploads": {
+    "target": "http://localhost:8080",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/api/anthropic": {
+    "target": "https://api.anthropic.com",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/anthropic": "/v1"
+    },
+    "headers": {
+      "x-api-key": "VOTRE_CLE_API_ANTHROPIC"
+    }
+  }
+}

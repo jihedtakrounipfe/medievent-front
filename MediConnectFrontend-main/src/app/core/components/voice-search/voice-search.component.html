@@ -1,0 +1,28 @@
+﻿<div class="voice-search-container">
+  <button 
+    class="voice-search-btn" 
+    [class.listening]="isListening"
+    (mousedown)="startListening()"
+    (mouseup)="stopListening()"
+    (mouseleave)="stopListening()"
+    [disabled]="!isSupported"
+    [title]="isSupported ? 'Maintenir pour parler' : 'Non supporté'"
+  >
+    <svg *ngIf="!isListening && !error" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V5a3 3 0 0 1 3-3z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+    </svg>
+    <svg *ngIf="isListening" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V5a3 3 0 0 1 3-3z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+    </svg>
+    <svg *ngIf="error" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <circle cx="12" cy="16" r="0.5" fill="#ef4444"/>
+    </svg>
+  </button>
+  <div class="voice-error" *ngIf="error">{{ error }}</div>
+</div>
